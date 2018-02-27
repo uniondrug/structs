@@ -9,9 +9,9 @@ namespace Uniondrug\Structs;
 abstract class PaginatorStruct extends Struct
 {
     /**
-     * @var \Uniondrug\Structs\PagerStruct
+     * @var \Uniondrug\Structs\PagingStruct
      */
-    public $page;
+    public $paging;
 
     /**
      * @param $data
@@ -22,14 +22,14 @@ abstract class PaginatorStruct extends Struct
     {
         $struct = new static();
 
-        if (!$struct->has('data')) {
-            throw new \RuntimeException('Property \'data\' for \'' . get_class($struct) . '\' must be defined');
+        if (!$struct->has('body')) {
+            throw new \RuntimeException('Property \'body\' for \'' . get_class($struct) . '\' must be defined');
         }
-        if (substr($struct->_definition['data'], -2) != '[]') {
-            throw new \RuntimeException('Property \'data\' for \'' . get_class($struct) . '\' must be defined as an array (end with [])');
+        if (substr($struct->_definition['body'], -2) != '[]') {
+            throw new \RuntimeException('Property \'body\' for \'' . get_class($struct) . '\' must be defined as an array (end with [])');
         }
 
-        $struct->page = PagerStruct::factory([
+        $struct->paging = PagingStruct::factory([
             'first'      => $data->first,
             'before'     => $data->before,
             'current'    => $data->current,
@@ -39,10 +39,10 @@ abstract class PaginatorStruct extends Struct
             'totalItems' => $data->total_items,
         ]);
 
-        $dataType = substr($struct->_definition['data'], 0, -2);
+        $dataType = substr($struct->_definition['body'], 0, -2);
         foreach ($data->items as $item) {
             // 只获取一层数据
-            $struct->data[] = $dataType::factory($item->toArray());
+            $struct->body[] = $dataType::factory($item->toArray());
         }
 
         return $struct;

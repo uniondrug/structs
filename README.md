@@ -116,7 +116,7 @@ $orderStruct = OrderStruct::factory($order);
 
 分页器结构体是用于直接将Phalcon的分页结果（通过 `getPaginate()` 方法分页查询的结果）直接转换成结构体。
 
-需要为不同的分页数据定义一个`data`属性。
+需要为不同的分页数据定义一个`body`属性。
 
 ```php
 <?php
@@ -127,8 +127,9 @@ class AreaPaginatorStruct extends PaginatorStruct
     /**
      * @var \App\Structs\AreaStruct[]
      */
-    public $data = [];
+    public $body = [];
 }
+
 ....
 
         // 分页查询
@@ -145,14 +146,14 @@ class AreaPaginatorStruct extends PaginatorStruct
 
 ```
 
-输出结构，详见`PaginatiorStruct`和`PagerStruct`：
+输出结构，详见`PaginatiorStruct`和`PagingStruct`：
 
 ```php
 [
-    'data' => [
+    'body' => [
        ...
     ],
-    'page' => [
+    'paging' => [
        ...
     ]
 ]

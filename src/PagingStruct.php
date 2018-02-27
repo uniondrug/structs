@@ -16,7 +16,7 @@ namespace Uniondrug\Structs;
  * @property int $totalPages
  * @property int $totalItems
  */
-final class PagerStruct extends Struct
+final class PagingStruct extends Struct
 {
     /**
      * @var int
