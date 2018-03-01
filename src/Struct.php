@@ -8,39 +8,32 @@ namespace Uniondrug\Structs;
 abstract class Struct implements StructInterface
 {
     /**
-     * 避免重复解析
-     *
-     * @var bool
-     */
-    protected static $_initialized = false;
-
-    /**
      * 保护属性列表，这些属性是只读的属性
      *
      * @var array
      */
-    protected static $_protected = [];
+    protected $_protected = [];
 
     /**
      * 结构体定义，在实例化时通过反射自动创建
      *
      * @var array
      */
-    protected static $_definition = [];
+    protected $_definition = [];
 
     /**
      * 结构体属性的默认值，实例化的时候保存进去
      *
      * @var array
      */
-    protected static $_defaults = [];
+    protected $_defaults = [];
 
     /**
      * 保留属性，不暴露
      *
      * @var array
      */
-    protected static $_reserved = ['_initialized', '_definition', '_protected', '_reserved', '_filters', '_defaults'];
+    protected static $_reserved = ['_definition', '_protected', '_reserved', '_filters', '_defaults'];
 
     /**
      * 类型过滤器，只支持如下类型，或者结构体，或者数组
@@ -64,9 +57,7 @@ abstract class Struct implements StructInterface
      */
     public function __construct($data = null)
     {
-        if (!static::$_initialized) {
-            static::_initialize();
-        }
+        $this->_initialize();
 
         if ($data !== null) {
             $this->init($data);
@@ -96,27 +87,17 @@ abstract class Struct implements StructInterface
     }
 
     /**
-     * @param $name
-     *
-     * @return bool
-     */
-    public static function defined($name)
-    {
-        return array_key_exists($name, static::$_definition);
-    }
-
-    /**
      * 从一个对象或者数组初始化结构体
      *
      * @param array|object $data
      */
     public function init($data)
     {
-        foreach (static::$_definition as $property => $type) {
+        foreach ($this->_definition as $property => $type) {
             if (is_array($data) && isset($data[$property])) {
-                $this->$property = $this->_convert($data[$property], $type, static::$_defaults[$property]);
+                $this->$property = $this->_convert($data[$property], $type, $this->_defaults[$property]);
             } elseif (is_object($data) && property_exists($data, $property)) {
-                $this->$property = $this->_convert($data->$property, $type, static::$_defaults[$property]);
+                $this->$property = $this->_convert($data->$property, $type, $this->_defaults[$property]);
             }
         }
     }
@@ -152,7 +133,7 @@ abstract class Struct implements StructInterface
             throw new \RuntimeException('Property \'' . $name . '\' is readonly');
         }
 
-        $this->$name = $this->_convert($value, static::$_definition[$name], static::$_defaults[$name]);
+        $this->$name = $this->_convert($value, $this->_definition[$name], $this->_defaults[$name]);
 
         return $this;
     }
@@ -206,7 +187,7 @@ abstract class Struct implements StructInterface
      */
     public function hasProperty($name)
     {
-        return static::defined($name);
+        return array_key_exists($name, $this->_definition);
     }
 
     /**
@@ -216,7 +197,7 @@ abstract class Struct implements StructInterface
      */
     public function getProperties()
     {
-        return array_keys(static::$_definition);
+        return array_keys($this->_definition);
     }
 
     /**
@@ -256,11 +237,7 @@ abstract class Struct implements StructInterface
      */
     final public function __get($name)
     {
-        if ($this->hasProperty($name)) {
-            return $this->$name;
-        }
-
-        throw new \RuntimeException('Property \'' . $name . '\' not exists');
+        return $this->get($name);
     }
 
     /**
@@ -271,14 +248,15 @@ abstract class Struct implements StructInterface
      */
     final public function __set($name, $value)
     {
-        if (!$this->hasProperty($name)) {
-            throw new \RuntimeException('Property \'' . $name . '\' not exists');
-        }
-        if ($this->_readonly($name)) {
-            throw new \RuntimeException('Property \'' . $name . '\' is readonly');
-        }
+        $this->set($name, $value);
+    }
 
-        $this->$name = $this->_convert($value, static::$_definition[$name]);
+    /**
+     * @return string
+     */
+    final public function __toString()
+    {
+        return $this->toJson();
     }
 
     /**
@@ -290,7 +268,7 @@ abstract class Struct implements StructInterface
      */
     protected function _readonly($name)
     {
-        return in_array($name, static::$_protected);
+        return in_array($name, $this->_protected);
     }
 
     /**
@@ -300,16 +278,16 @@ abstract class Struct implements StructInterface
      *  标量：string/int/bool/float
      *  数组：单一结构，其组成也只能是标量，或者结构体
      */
-    protected static function _initialize()
+    protected function _initialize()
     {
-        $reflection = new \ReflectionClass(static::class);
+        $reflection = new \ReflectionObject($this);
         $properties = $reflection->getProperties(\ReflectionProperty::IS_PUBLIC | \ReflectionProperty::IS_PROTECTED);
         $defaults = $reflection->getDefaultProperties();
 
         $data = [];
         foreach ($properties as $property) {
             if (!in_array($property->name, static::$_reserved)) {
-                static::$_defaults[$property->name] = $defaults[$property->name];
+                $this->_defaults[$property->name] = $defaults[$property->name];
                 $data[$property->name] = 'string';
                 $doc = $property->getDocComment();
                 if (!empty($doc)) {
@@ -339,13 +317,12 @@ abstract class Struct implements StructInterface
 
                 // 标记为只读
                 if ($property->isProtected()) {
-                    static::$_protected[] = $property->name;
+                    $this->_protected[] = $property->name;
                 }
             }
         }
 
-        static::$_initialized = true;
-        static::$_definition = $data;
+        $this->_definition = $data;
     }
 
     /**

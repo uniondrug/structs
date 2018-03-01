@@ -32,15 +32,6 @@ interface StructInterface
     public static function reserved($name);
 
     /**
-     * 检测一个属性是否定义
-     *
-     * @param string $name
-     *
-     * @return bool
-     */
-    public static function defined($name);
-
-    /**
      * 初始化结构体
      *
      * @param null|array|object $data
