@@ -13,9 +13,7 @@
             "email" : "dev@uniondrug.cn"
         }
     ],
-    "require" : {
-		"uniondrug/framework": "^2.0"
-	},
+    "require" : {},
     "autoload" : {
         "psr-4" : {
             "Uniondrug\\Structs\\" : "src/"
