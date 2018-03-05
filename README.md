@@ -158,3 +158,7 @@ class AreaPaginatorStruct extends PaginatorStruct
     ]
 ]
 ```
+
+* 分页请求结构体
+
+`PageRequestStruct`，主要用户分页请求。通常作为分页请求的参数的结构体的基类。
