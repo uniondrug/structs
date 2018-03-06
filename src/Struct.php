@@ -33,14 +33,14 @@ abstract class Struct implements StructInterface
      *
      * @var array
      */
-    protected $_reserved = ['_definition', '_protected', '_reserved', '_filters', '_defaults'];
+    protected static $_reserved = ['_definition', '_protected', '_reserved', '_filters', '_defaults'];
 
     /**
      * 类型过滤器，只支持如下类型，或者结构体，或者数组
      *
      * @var array
      */
-    protected $_filters = [
+    protected static $_filters = [
         'string'  => FILTER_SANITIZE_STRING,
         'int'     => FILTER_VALIDATE_INT,
         'integer' => FILTER_VALIDATE_INT,
@@ -74,6 +74,16 @@ abstract class Struct implements StructInterface
     public static function factory($data = null)
     {
         return new static($data);
+    }
+
+    /**
+     * @param $name
+     *
+     * @return bool
+     */
+    public static function reserved($name)
+    {
+        return in_array($name, static::$_reserved);
     }
 
     /**
@@ -227,11 +237,7 @@ abstract class Struct implements StructInterface
      */
     final public function __get($name)
     {
-        if ($this->hasProperty($name)) {
-            return $this->$name;
-        }
-
-        throw new \RuntimeException('Property \'' . $name . '\' not exists');
+        return $this->get($name);
     }
 
     /**
@@ -242,14 +248,15 @@ abstract class Struct implements StructInterface
      */
     final public function __set($name, $value)
     {
-        if (!$this->hasProperty($name)) {
-            throw new \RuntimeException('Property \'' . $name . '\' not exists');
-        }
-        if ($this->_readonly($name)) {
-            throw new \RuntimeException('Property \'' . $name . '\' is readonly');
-        }
+        $this->set($name, $value);
+    }
 
-        $this->$name = $this->_convert($value, $this->_definition[$name]);
+    /**
+     * @return string
+     */
+    final public function __toString()
+    {
+        return $this->toJson();
     }
 
     /**
@@ -279,7 +286,7 @@ abstract class Struct implements StructInterface
 
         $data = [];
         foreach ($properties as $property) {
-            if (!in_array($property->name, $this->_reserved)) {
+            if (!in_array($property->name, static::$_reserved)) {
                 $this->_defaults[$property->name] = $defaults[$property->name];
                 $data[$property->name] = 'string';
                 $doc = $property->getDocComment();
@@ -297,7 +304,7 @@ abstract class Struct implements StructInterface
                                 }
 
                                 // 标量类型
-                                if (array_key_exists($realType, $this->_filters) || is_a($realType, StructInterface::class, true)) {
+                                if (array_key_exists($realType, static::$_filters) || is_a($realType, StructInterface::class, true)) {
                                     $data[$property->name] = $type;
                                     break;
                                 }
@@ -382,7 +389,7 @@ abstract class Struct implements StructInterface
         }
 
         // 标量
-        return filter_var($value, $this->_filters[$type], [
+        return filter_var($value, static::$_filters[$type], [
             'options' => [
                 'default' => $default,
             ],
