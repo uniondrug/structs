@@ -280,7 +280,9 @@ abstract class Struct implements StructInterface
      */
     protected function _initialize()
     {
+
         $reflection = new \ReflectionObject($this);
+        $namespace = $reflection->getNamespaceName();
         $properties = $reflection->getProperties(\ReflectionProperty::IS_PUBLIC | \ReflectionProperty::IS_PROTECTED);
         $defaults = $reflection->getDefaultProperties();
 
@@ -306,6 +308,13 @@ abstract class Struct implements StructInterface
                                 // 标量类型
                                 if (array_key_exists($realType, static::$_filters) || is_a($realType, StructInterface::class, true)) {
                                     $data[$property->name] = $type;
+                                    break;
+                                }
+
+                                // Add Current NamespaceName
+                                $fullClass = $namespace . '\\' . $type;
+                                if (is_a($fullClass, StructInterface::class, true)) {
+                                    $data[$property->name] = $fullClass;
                                     break;
                                 }
 
