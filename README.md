@@ -23,6 +23,8 @@ $ composer require uniondrug/structs
 
 4、如果属性没有设置类型，默认是`string`类型；
 
+> 注意：属性是数组时，其元素必须是一个结构体，或者是相同类型的标量。是标量类型则必须指定是何种类型，比如：`string[]`,`int[]`。当构造数据中有类型不符且不能转换时，会以`null`代替。
+
 
 ```php
 <?php
@@ -39,6 +41,11 @@ class OrderItemStruct extends Struct
      * @var float
      */
      public $unitPrice;
+
+    /**
+     * @var int[]
+     */
+     public $cats;
 }
 
 class MemberStruct extends Struct
