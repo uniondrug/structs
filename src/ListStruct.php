@@ -35,6 +35,7 @@ abstract class ListStruct extends Struct
             if ($isStruct) {
                 $struct->body[] = $dataType::factory($item);
             } else {
+                echo "a\n";
                 $struct->body[] = $item;
             }
         }
