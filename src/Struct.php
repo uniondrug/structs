@@ -124,6 +124,13 @@ abstract class Struct implements StructInterface
             } elseif (is_object($data) && method_exists($data, 'get' . $property)) {
                 $method = 'get' . $property;
                 $this->$property = $data->$method();
+            } elseif (is_object($data)) {
+                // 对于提供魔术方法 __get 的对象
+                try {
+                    $this->$property = $data->$property;
+                } catch (\Throwable $e) {
+                    $this->$property = $this->_defaults[$property];
+                }
             } else {
                 // 用默认值
                 $this->$property = $this->_defaults[$property];
