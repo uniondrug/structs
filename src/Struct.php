@@ -262,7 +262,7 @@ abstract class Struct implements StructInterface
      *
      * @return bool
      */
-    public function __isset($name)
+    final public function __isset($name)
     {
         return isset($this->_variables[$name]);
     }
@@ -270,7 +270,7 @@ abstract class Struct implements StructInterface
     /**
      * @param $name
      */
-    public function __unset($name)
+    final public function __unset($name)
     {
         if (!$this->has($name)) {
             throw new \RuntimeException('Property \'' . $name . '\' not exists');
@@ -283,7 +283,7 @@ abstract class Struct implements StructInterface
      *
      * @return mixed
      */
-    public function & __get($name)
+    final public function & __get($name)
     {
         if (!$this->__isset($name)) {
             throw new \RuntimeException('Property \'' . $name . '\' not exists');
@@ -296,10 +296,9 @@ abstract class Struct implements StructInterface
      * @param $name
      * @param $value
      *
-     * @return \Uniondrug\Structs\Struct|void
-     * @throws \Uniondrug\Validation\Exceptions\ParamException
+     * @return void
      */
-    public function __set($name, $value)
+    final public function __set($name, $value)
     {
         if (!$this->hasProperty($name)) {
             throw new \RuntimeException('Property \'' . $name . '\' not exists');
