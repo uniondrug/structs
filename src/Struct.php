@@ -138,7 +138,6 @@ abstract class Struct implements StructInterface
      * @param $value
      *
      * @return $this
-     * @throws \Uniondrug\Validation\Exceptions\ParamException
      */
     public function set($name, $value)
     {
@@ -154,7 +153,6 @@ abstract class Struct implements StructInterface
      * @param $value
      *
      * @return $this
-     * @throws \Uniondrug\Validation\Exceptions\ParamException
      */
     public function setProperty($name, $value)
     {
@@ -301,11 +299,11 @@ abstract class Struct implements StructInterface
     final public function __set($name, $value)
     {
         if (!$this->hasProperty($name)) {
-            throw new \RuntimeException('Property \'' . $name . '\' not exists');
+            throw new \RuntimeException("[" . get_class($this) . "] Property \'' . $name . '\' not exists");
         }
 
         if ($this->_readonly($name)) {
-            throw new \RuntimeException('Property \'' . $name . '\' is readonly');
+            throw new \RuntimeException("[" . get_class($this) . "] Property \'' . $name . '\' is readonly");
         }
 
         // 验证器验证
@@ -322,7 +320,7 @@ abstract class Struct implements StructInterface
 
             $this->_variables[$name] = $this->_convert($value, $this->_definition[$name]);
         } catch (\Exception $e) {
-            throw new \RuntimeException("Set property '$name' failed: " . $e->getMessage());
+            throw new \RuntimeException("[" . get_class($this) . "] Set property '$name' failed: " . $e->getMessage());
         }
     }
 
@@ -348,7 +346,7 @@ abstract class Struct implements StructInterface
     protected function _initialize()
     {
         // 需要先行处理
-        $this->_rules = $this->_parseValidationRules(get_class($this));
+        $this->_rules = static::_parseValidationRules(get_class($this));
 
         // 初始化结构体
         $reflection = new \ReflectionObject($this);
@@ -392,7 +390,7 @@ abstract class Struct implements StructInterface
                                     break;
                                 }
 
-                                throw new \RuntimeException('Type \'' . $type . '\' not allowed in struct');
+                                throw new \RuntimeException("[" . get_class($this) . "] Type '$type' not allowed in struct");
                             }
                         }
                     }
@@ -455,7 +453,7 @@ abstract class Struct implements StructInterface
                 return $data;
             }
 
-            throw new \RuntimeException('Type \'' . $type . '\' require value must by an array');
+            throw new \RuntimeException("[" . get_class($this) . "] Type '$type' require value must by an array");
         }
 
         // 结构体
@@ -465,7 +463,7 @@ abstract class Struct implements StructInterface
                 if (get_class($value) == $type) {
                     return $value;
                 } else {
-                    throw new \RuntimeException('Type \'' . $type . '\' required, but \'' . get_class($value) . '\' given');
+                    throw new \RuntimeException("[" . get_class($this) . "] Type '$type' required, but '" . get_class($value) . "' given");
                 }
             }
 
@@ -478,7 +476,7 @@ abstract class Struct implements StructInterface
         // 标量转换
         $value = filter_var($value, static::$_filters[$type]);
         if ($value === false && $type != 'bool' && $type != 'boolean') {
-            throw new \RuntimeException('Type \'' . $type . '\' required, but \'' . $originValue . '\' given');
+            throw new \RuntimeException("[" . get_class($this) . "] Type '$type' required, but '" . $originValue . "' given");
         }
 
         return $value;
@@ -494,7 +492,7 @@ abstract class Struct implements StructInterface
      *
      * @return array
      */
-    protected function _parseValidationRules($className)
+    protected static function _parseValidationRules($className)
     {
         /**
          * 从结构体字段中获取注解，完成规则定义
@@ -510,12 +508,12 @@ abstract class Struct implements StructInterface
         $structAnnotation = Di::getDefault()->getShared('annotations')->get($className);
         foreach ($structAnnotation->getPropertiesAnnotations() as $property => $annotations) {
             /* @var \Phalcon\Annotations\Collection $annotations */
-            if ($className::reserved($property)) {
+            if (static::reserved($property)) {
                 continue;
             }
             if ($annotations->has(static::ANNOTATION_NAME)) {
                 $validatorAnnotation = $annotations->get(static::ANNOTATION_NAME);
-                $rules[$property] = $validatorAnnotation->getArguments();
+                $rules[$property]= $validatorAnnotation->getArguments();
             }
         }
 
