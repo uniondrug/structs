@@ -459,12 +459,8 @@ abstract class Struct implements StructInterface
         // 结构体
         if (is_a($type, StructInterface::class, true)) {
             // 已经是结构体
-            if (is_object($value)) {
-                if (get_class($value) == $type) {
-                    return $value;
-                } else {
-                    throw new \RuntimeException("[" . get_class($this) . "] Type '$type' required, but '" . get_class($value) . "' given");
-                }
+            if (is_object($value) && get_class($value) == $type) {
+                return $value;
             }
 
             // 构造实例化目标结构体
