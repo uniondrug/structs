@@ -262,7 +262,7 @@ abstract class Struct implements StructInterface
      */
     final public function __isset($name)
     {
-        return isset($this->_variables[$name]);
+        return isset($this->_definition[$name]);
     }
 
     /**
