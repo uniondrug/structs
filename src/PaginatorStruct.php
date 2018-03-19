@@ -20,7 +20,6 @@ abstract class PaginatorStruct extends Struct
      */
     public static function factory($data = null)
     {
-        // phalcon QueryBuild response compatiable.
         // if (!is_object($data) || !property_exists($data, 'items') || property_exists($data, 'first')) {
         //    throw new \RuntimeException('input data must be an Paginator object');
         // }
@@ -45,7 +44,7 @@ abstract class PaginatorStruct extends Struct
         $dataType = substr($struct->_definition['body'], 0, -2);
         foreach ($data->items as $item) {
             // 只获取一层数据
-            $struct->body[] = $dataType::factory($item->toArray());
+            $struct->body[] = $dataType::factory($item);
         }
         return $struct;
     }

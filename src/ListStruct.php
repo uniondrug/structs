@@ -8,23 +8,6 @@ namespace Uniondrug\Structs;
 abstract class ListStruct extends Struct
 {
     /**
-     * override parent toArray()
-     * @return array
-     */
-    public function toArray()
-    {
-        /**
-         * @var array           $data
-         * @var StructInterface $item
-         */
-        $data = [];
-        foreach ($this->body as $item) {
-            $data[] = $item->toArray();
-        }
-        return $data;
-    }
-
-    /**
      * @param array $data
      *
      * @return static
