@@ -77,11 +77,8 @@ abstract class Struct implements StructInterface
     public function __construct($data = null)
     {
         $this->_initialize();
-
         if ($data !== null) {
             $this->init($data);
-        } else {
-            $this->init([]);
         }
     }
 
@@ -269,7 +266,7 @@ abstract class Struct implements StructInterface
      */
     final public function __isset($name)
     {
-        return isset($this->_variables[$name]);
+        return isset($this->_definition[$name]);
     }
 
     /**
@@ -358,7 +355,7 @@ abstract class Struct implements StructInterface
         // 初始化结构体
         $reflection = new \ReflectionObject($this);
         $namespace = $reflection->getNamespaceName();
-        $properties = $reflection->getProperties(\ReflectionProperty::IS_PUBLIC);
+        $properties = $reflection->getProperties(\ReflectionProperty::IS_PUBLIC | \ReflectionProperty::IS_PROTECTED);
         $defaults = $reflection->getDefaultProperties();
 
         $data = [];
