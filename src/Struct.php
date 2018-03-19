@@ -77,11 +77,8 @@ abstract class Struct implements StructInterface
     public function __construct($data = null)
     {
         $this->_initialize();
-
         if ($data !== null) {
             $this->init($data);
-        } else {
-            $this->init([]);
         }
     }
 
