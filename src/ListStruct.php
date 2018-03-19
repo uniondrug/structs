@@ -15,11 +15,11 @@ abstract class ListStruct extends Struct
     {
         /**
          * @var array           $data
-         * @var StructInterface $body
+         * @var StructInterface $item
          */
         $data = [];
-        foreach ($this->body as $body) {
-            $data[] = $body->toArray();
+        foreach ($this->body as $item) {
+            $data[] = $item->toArray();
         }
         return $data;
     }
