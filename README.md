@@ -17,6 +17,20 @@ $ cd project-home
 $ composer require uniondrug/structs
 ```
 
+修改 `app.php` 配置文件，加上StructManager服务。服务名称：`structManager`。
+
+```php
+return [
+    'default' => [
+        ......
+        'providers'           => [
+            ......
+            \Uniondrug\Structs\StructManagerServiceProvider::class,
+        ],
+    ],
+];
+```
+
 ## 使用
 
 ### 定义结构体

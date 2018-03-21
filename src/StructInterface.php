@@ -28,6 +28,7 @@ interface StructInterface
      * @param string $name
      *
      * @return bool
+     * @deprecated
      */
     public static function reserved($name);
 
@@ -117,6 +118,7 @@ interface StructInterface
      * 返回所有属性
      *
      * @return array
+     * @deprecated
      */
     public function getProperties();
 }
