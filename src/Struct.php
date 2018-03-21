@@ -5,12 +5,24 @@
 
 namespace Uniondrug\Structs;
 
-use Phalcon\Di;
+use Uniondrug\Framework\Container;
 use Uniondrug\Validation\Param;
 
-abstract class Struct implements StructInterface
+abstract class Struct implements StructInterface, \Serializable, \JsonSerializable
 {
-    const ANNOTATION_NAME = 'Validator';
+    /**
+     * 容器
+     *
+     * @var Container
+     */
+    protected $_dependencyInjector;
+
+    /**
+     * 结构体管理服务
+     *
+     * @var \Uniondrug\Structs\StructManager
+     */
+    protected $_structManager;
 
     /**
      * 结构体的实际内容
@@ -20,63 +32,21 @@ abstract class Struct implements StructInterface
     protected $_variables = [];
 
     /**
-     * 受保护的结构体属性
-     *
-     * @var array
-     */
-    protected $_protected = [];
-
-    /**
-     * 结构体属性的类型定义，在实例化时通过反射自动创建
-     *
-     * @var array
-     */
-    protected $_definition = [];
-
-    /**
-     * 结构体属性的默认值，实例化的时候保存进去
-     *
-     * @var array
-     */
-    protected $_defaults = [];
-
-    /**
-     * 属性的验证规则
-     *
-     * @var array
-     */
-    protected $_rules = [];
-
-    /**
-     * 保留属性，不暴露
-     *
-     * @var array
-     */
-    protected static $_reserved = ['_variables', '_definition', '_protected', '_reserved', '_filters', '_defaults', '_validators', '_rules'];
-
-    /**
-     * 类型过滤器，只支持如下类型，或者结构体，或者数组
-     *
-     * @var array
-     */
-    protected static $_filters = [
-        'string'  => FILTER_SANITIZE_STRING,
-        'int'     => FILTER_VALIDATE_INT,
-        'integer' => FILTER_VALIDATE_INT,
-        'bool'    => FILTER_VALIDATE_BOOLEAN,
-        'boolean' => FILTER_VALIDATE_BOOLEAN,
-        'float'   => FILTER_VALIDATE_FLOAT,
-        'double'  => FILTER_VALIDATE_FLOAT,
-    ];
-
-    /**
      * 构造函数，初始化结构体。
      *
      * @param null|array|object $data
      */
     public function __construct($data = null)
     {
-        $this->_initialize();
+        $this->_dependencyInjector = Container::getDefault();
+        $this->_structManager = $this->_dependencyInjector->getShared('structManager');
+        if (!is_object($this->_structManager)) {
+            throw new \RuntimeException('The injected service \'structManager\' is not valid');
+        }
+
+        $this->_structManager->initialize($this);
+        $this->init($this->getDefaults());
+
         if ($data !== null) {
             $this->init($data);
         }
@@ -98,10 +68,11 @@ abstract class Struct implements StructInterface
      * @param $name
      *
      * @return bool
+     * @deprecated
      */
     public static function reserved($name)
     {
-        return in_array($name, static::$_reserved);
+        return false;
     }
 
     /**
@@ -111,7 +82,7 @@ abstract class Struct implements StructInterface
      */
     public function init($data)
     {
-        foreach ($this->_definition as $property => $type) {
+        foreach ($this->getDefinitions() as $property => $type) {
             if (is_array($data) && isset($data[$property])) {
                 $this->$property = $data[$property];
             } elseif (is_object($data) && property_exists($data, $property)) {
@@ -126,13 +97,36 @@ abstract class Struct implements StructInterface
                 try {
                     $this->$property = $data->$property;
                 } catch (\Throwable $e) {
-                    $this->$property = $this->_defaults[$property];
+                    $this->$property = $this->getDefault($property);
                 }
             } else {
-                // 用默认值
-                $this->$property = $this->_defaults[$property];
+                $this->$property = $this->getDefault($property);
             }
         }
+    }
+
+    /**
+     * 检测一个属性是否存在
+     *
+     * @param $name
+     *
+     * @return bool
+     */
+    public function has($name)
+    {
+        return $this->__isset($name);
+    }
+
+    /**
+     * 检测一个属性是否存在
+     *
+     * @param $name
+     *
+     * @return bool
+     */
+    public function hasProperty($name)
+    {
+        return $this->__isset($name);
     }
 
     /**
@@ -190,37 +184,80 @@ abstract class Struct implements StructInterface
     }
 
     /**
-     * alias of hasProperty()
+     * 获取所有属性及其定义
      *
-     * @param $name
-     *
-     * @return bool
+     * @return mixed
      */
-    public function has($name)
+    public function getDefinitions()
     {
-        return array_key_exists($name, $this->_definition);
+        return $this->_structManager->getDefinitions($this);
     }
 
     /**
-     * 检测一个属性是否存在
+     * 获取指定属性的定义
      *
      * @param $name
      *
-     * @return bool
+     * @return mixed
      */
-    public function hasProperty($name)
+    public function getDefinition($name)
     {
-        return $this->has($name);
+        return $this->_structManager->getDefinition($this, $name);
+    }
+
+    /**
+     * 返回所有属性及其默认值
+     *
+     * @return mixed
+     */
+    public function getDefaults()
+    {
+        return $this->_structManager->getDefaults($this);
+    }
+
+    /**
+     * 返回一个属性的默认值
+     *
+     * @param $name
+     *
+     * @return mixed
+     */
+    public function getDefault($name)
+    {
+        return $this->_structManager->getDefault($this, $name);
+    }
+
+    /**
+     * 返回全部验证规则
+     *
+     * @return array|mixed
+     */
+    public function getRules()
+    {
+        return $this->_structManager->getRules($this);
+    }
+
+    /**
+     * 返回属性的验证规则
+     *
+     * @param $name
+     *
+     * @return false|array
+     */
+    public function getRule($name)
+    {
+        return $this->_structManager->getRule($this, $name);
     }
 
     /**
      * 获取所有的公共属性
      *
      * @return array
+     * @deprecated
      */
     public function getProperties()
     {
-        return array_keys($this->_definition);
+        return $this->_structManager->getDefinitions($this);
     }
 
     /**
@@ -232,7 +269,7 @@ abstract class Struct implements StructInterface
     {
         $data = [];
         foreach ($this->_variables as $name => $value) {
-            $data[$name] = $this->_value($value);
+            $data[$name] = $this->_structManager->value($value);
         }
 
         return $data;
@@ -266,7 +303,7 @@ abstract class Struct implements StructInterface
      */
     final public function __isset($name)
     {
-        return isset($this->_definition[$name]);
+        return $this->_structManager->has($this, $name);
     }
 
     /**
@@ -274,9 +311,10 @@ abstract class Struct implements StructInterface
      */
     final public function __unset($name)
     {
-        if (!$this->has($name)) {
+        if (!$this->__isset($name)) {
             throw new \RuntimeException('Property \'' . $name . '\' not exists');
         }
+
         throw new \RuntimeException('Property \'' . $name . '\' cannot be unset');
     }
 
@@ -302,27 +340,28 @@ abstract class Struct implements StructInterface
      */
     final public function __set($name, $value)
     {
-        if (!$this->hasProperty($name)) {
+        if (!$this->__isset($name)) {
             throw new \RuntimeException("[" . get_class($this) . "] Property \'' . $name . '\' not exists");
         }
 
-        if ($this->_readonly($name)) {
+        if ($this->isProtected($name)) {
             throw new \RuntimeException("[" . get_class($this) . "] Property \'' . $name . '\' is readonly");
         }
 
         // 验证器验证
         try {
-            if (isset($this->_rules[$name])) {
-                $rules = [$name => $this->_rules[$name]];
-                if (!isset($rules[$name]['type']) && in_array($this->_definition[$name], ['string', 'int', 'integer', 'float', 'double'])) {
-                    $rules[$name]['type'] = $this->_definition[$name];
+            $definition = $this->getDefinition($name);
+            if ($rule = $this->getRule($name)) {
+                $rules = [$name => $rule];
+                if (!isset($rules[$name]['type']) && in_array($definition, ['string', 'int', 'integer', 'float', 'double'])) {
+                    $rules[$name]['type'] = $definition;
                 }
 
                 $value = Param::check([$name => $value], $rules);
                 $value = $value[$name];
             }
 
-            $this->_variables[$name] = $this->_convert($value, $this->_definition[$name]);
+            $this->_variables[$name] = $this->_structManager->convert($value, $definition);
         } catch (\Exception $e) {
             throw new \RuntimeException("[" . get_class($this) . "] Set property '$name' failed: " . $e->getMessage());
         }
@@ -335,188 +374,32 @@ abstract class Struct implements StructInterface
      *
      * @return bool
      */
-    protected function _readonly($name)
+    protected function isProtected($name)
     {
-        return in_array($name, $this->_protected);
+        return $this->_structManager->isProtected($this, $name);
     }
 
     /**
-     * 通过反射获取定义的属性
-     *
-     * 结构体的属性类型只能是：
-     *  标量：string/int/bool/float
-     *  数组：单一结构，其组成也只能是同一种标量，或者结构体
+     * @return string
      */
-    protected function _initialize()
+    public function serialize()
     {
-        // 需要先行处理
-        $this->_rules = static::_parseValidationRules(get_class($this));
-
-        // 初始化结构体
-        $reflection = new \ReflectionObject($this);
-        $namespace = $reflection->getNamespaceName();
-        $properties = $reflection->getProperties(\ReflectionProperty::IS_PUBLIC | \ReflectionProperty::IS_PROTECTED);
-        $defaults = $reflection->getDefaultProperties();
-
-        $data = [];
-        foreach ($properties as $property) {
-            if (!in_array($property->name, static::$_reserved)) {
-
-                // 定义的属性和默认值
-                $this->_variables[$property->name] = $defaults[$property->name];
-                $this->_defaults[$property->name] = $defaults[$property->name];
-
-                $data[$property->name] = 'string'; // 默认类型
-                $doc = $property->getDocComment();
-                if (!empty($doc)) {
-                    $docLines = explode("\n", $doc);
-                    foreach ($docLines as $line) {
-                        if (preg_match('/@var\s+([^\s]*)(\s+.*)?$/', $line, $match)) {
-                            array_shift($match);
-                            $type = array_shift($match);
-                            if ($type) {
-                                if (substr($type, -2) == '[]') {
-                                    $realType = substr($type, 0, -2);
-                                } else {
-                                    $realType = $type;
-                                }
-
-                                // 标量类型
-                                if (array_key_exists($realType, static::$_filters) || is_a($realType, StructInterface::class, true)) {
-                                    $data[$property->name] = $type;
-                                    break;
-                                }
-
-                                // Add Current NamespaceName
-                                $fullClass = $namespace . '\\' . $type;
-                                if (is_a($fullClass, StructInterface::class, true)) {
-                                    $data[$property->name] = $fullClass;
-                                    break;
-                                }
-
-                                throw new \RuntimeException("[" . get_class($this) . "] Type '$type' not allowed in struct");
-                            }
-                        }
-                    }
-                }
-
-                // 去除该属性，走__set/__get方法
-                unset($this->{$property->name});
-            }
-        }
-
-        $this->_definition = $data;
+        return $this->toJson();
     }
 
     /**
-     * 取值。如果值是结构体，返回数组结构
-     *
-     * @param $value
-     *
-     * @return mixed
+     * @param string $serialized
      */
-    protected function _value($value)
+    public function unserialize($serialized)
     {
-        if ($value instanceof Struct) {
-            return $value->toArray();
-        }
-
-        if (is_array($value)) {
-            $data = [];
-            foreach ($value as $v) {
-                $data[] = $this->_value($v);
-            }
-
-            return $data;
-        }
-
-        return $value;
+        $this->init(json_decode($serialized));
     }
 
     /**
-     * 转换值
-     *
-     * @param      $value
-     * @param      $type
-     *
-     * @return array|float|int|string|\Uniondrug\Structs\Struct
+     * @return mixed|string
      */
-    protected function _convert($value, $type)
+    public function jsonSerialize()
     {
-        $originValue = $value;
-
-        // 处理数组结构的属性
-        if (substr($type, -2) == '[]') {
-            if (is_array($value) || $value instanceof \Iterator || $value instanceof \ArrayAccess) {
-                $subtype = substr($type, 0, -2);
-                $data = [];
-                foreach ($value as $v) {
-                    $data[] = $this->_convert($v, $subtype);
-                }
-
-                return $data;
-            }
-
-            throw new \RuntimeException("[" . get_class($this) . "] Type '$type' require value must by an array");
-        }
-
-        // 结构体
-        if (is_a($type, StructInterface::class, true)) {
-            // 已经是结构体
-            if (is_object($value) && get_class($value) == $type) {
-                return $value;
-            }
-
-            // 构造实例化目标结构体
-            $res = $type::factory($value);
-
-            return $res;
-        }
-
-        // 标量转换
-        $value = filter_var($value, static::$_filters[$type]);
-        if ($value === false && $type != 'bool' && $type != 'boolean') {
-            throw new \RuntimeException("[" . get_class($this) . "] Type '$type' required, but '" . $originValue . "' given");
-        }
-
-        return $value;
-    }
-
-    /**
-     * 从注解中解析规则
-     *
-     * 支持如下注解：
-     * @Validator(type=int,default=5,required=true,empty=true,filter={abc,def},options={min=5,max=10})
-     *
-     * @param string $className 结构体类名
-     *
-     * @return array
-     */
-    protected static function _parseValidationRules($className)
-    {
-        /**
-         * 从结构体字段中获取注解，完成规则定义
-         *
-         * @Validator(type=int,default=5,required=true,empty=true,filter={abc,def},options={min=5,max=10})
-         *
-         * 结构体的字段默认值会自动当做验证字段的默认值。
-         *
-         */
-
-        /* @var \Phalcon\Annotations\Reflection $structAnnotation */
-        $rules = [];
-        $structAnnotation = Di::getDefault()->getShared('annotations')->get($className);
-        foreach ($structAnnotation->getPropertiesAnnotations() as $property => $annotations) {
-            /* @var \Phalcon\Annotations\Collection $annotations */
-            if (static::reserved($property)) {
-                continue;
-            }
-            if ($annotations->has(static::ANNOTATION_NAME)) {
-                $validatorAnnotation = $annotations->get(static::ANNOTATION_NAME);
-                $rules[$property]= $validatorAnnotation->getArguments();
-            }
-        }
-
-        return $rules;
+        return $this->toJson();
     }
 }
