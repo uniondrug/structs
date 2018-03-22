@@ -25,6 +25,16 @@ class ExampleStruct extends Struct
 ### 用法
 
 ```php
+class Example extends Model
+{
+    public function getStatusText()
+    {
+        return "禁用";
+    }
+}
+```
+
+```php
 $model = new Example();
 $struct = ExampleStruct::factory($model);
 
