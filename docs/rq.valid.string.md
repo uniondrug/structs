@@ -19,8 +19,14 @@ class ExampleStruct extends Struct
 {
     /**
      * @var string
-     * @Validator(type=string,filters={disable,enable},required=true,empty=false)
+     * @Validator(type=string,required=true)
      */
     public $column;
+
+    /**
+     * @var string
+     * @Validator(type=string,filters={disable,enable},required=true,empty=false)
+     */
+    public $columnText;
 }
 ```

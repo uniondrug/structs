@@ -21,7 +21,7 @@
 1. **类型限制**
     1. [Integer](./rq.valid.integer.md) - 要求值必须为整型
     1. [Double](./rq.valid.double.md) - 要求值必须为浮点型
-    1. [String](./rq.valid.double.md) - 要求值必须为字符串
+    1. [String](./rq.valid.string.md) - 要求值必须为字符串
 1. **扩展限制**
     1. [Email](./rq.valid.email.md) - 要求值必须是邮箱地址
     1. [Mobile](./rq.valid.mobile.md) - 要求值必须是手机号码
