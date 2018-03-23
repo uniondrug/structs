@@ -21,7 +21,7 @@ class StructManager extends Injectable
     const ANNOTATION_NAME = 'Validator';
 
     /**
-     * 结构体的字段定义
+     * 结构体的全部字段定义
      *
      * @var array
      */
@@ -42,21 +42,14 @@ class StructManager extends Injectable
     protected $defaults = [];
 
     /**
-     * 结构体的验证规则
+     * 结构体的属性的验证规则
      *
      * @var array
      */
     protected $rules = [];
 
     /**
-     * 已经初始化过的结构体列表
-     *
-     * @var array
-     */
-    protected $initialized = [];
-
-    /**
-     * 结构体不可以用的属性
+     * 结构体不可以用的字段
      *
      * @var array
      */
@@ -76,25 +69,6 @@ class StructManager extends Injectable
         'float'   => FILTER_VALIDATE_FLOAT,
         'double'  => FILTER_VALIDATE_FLOAT,
     ];
-
-    /**
-     * 初始化结构体
-     *
-     * @param \Uniondrug\Structs\StructInterface $struct
-     *
-     * @return bool
-     */
-    public function initialize(StructInterface $struct)
-    {
-        $className = strtolower(get_class($struct));
-        if (isset($this->initialized[$className])) {
-            return false;
-        }
-        $this->_initialize($struct);
-        $this->initialized[$className] = $struct;
-
-        return true;
-    }
 
     /**
      * @param \Uniondrug\Structs\StructInterface $struct
@@ -243,73 +217,78 @@ class StructManager extends Injectable
      *
      * @param \Uniondrug\Structs\StructInterface $struct
      */
-    protected function _initialize(StructInterface $struct)
+    public function initialize(StructInterface $struct)
     {
         $className = strtolower(get_class($struct));
 
-        // 需要先行处理
-        $this->rules[$className] = $this->_parseValidationRules(get_class($struct));
+        if (!isset($this->definitions[$className])) {
+            // 需要先行处理
+            $this->rules[$className] = $this->_parseValidationRules(get_class($struct));
 
-        // 初始化结构体
-        $reflection = new \ReflectionObject($struct);
-        $namespace = $reflection->getNamespaceName();
-        $properties = $reflection->getProperties(\ReflectionProperty::IS_PUBLIC | \ReflectionProperty::IS_PROTECTED);
-        $defaults = $reflection->getDefaultProperties();
+            // 初始化结构体
+            $reflection = new \ReflectionObject($struct);
+            $namespace = $reflection->getNamespaceName();
+            $properties = $reflection->getProperties(\ReflectionProperty::IS_PUBLIC | \ReflectionProperty::IS_PROTECTED);
 
-        $definitions = [];
-        $protected = [];
-        foreach ($properties as $property) {
-            if (!in_array($property->name, $this->reserved)) {
-                $definitions[$property->name] = $defaults[$property->name];
+            $defaults = $reflection->getDefaultProperties();
+            $protected = [];
+            $definitions = [];
 
-                // 只读属性
-                if ($property->isProtected()) {
-                    $protected[] = $property->name;
-                }
+            foreach ($properties as $property) {
+                if (!in_array($property->name, $this->reserved)) {
+                    $definitions[$property->name] = $defaults[$property->name];
 
-                // 解析属性类型
-                $definitions[$property->name] = 'string'; // 默认类型
-                $doc = $property->getDocComment();
-                if (!empty($doc)) {
-                    $docLines = explode("\n", $doc);
-                    foreach ($docLines as $line) {
-                        if (preg_match('/@var\s+([^\s]*)(\s+.*)?$/', $line, $match)) {
-                            array_shift($match);
-                            $type = array_shift($match);
-                            if ($type) {
-                                if (substr($type, -2) == '[]') {
-                                    $realType = substr($type, 0, -2);
-                                } else {
-                                    $realType = $type;
+                    // 只读属性
+                    if ($property->isProtected()) {
+                        $protected[] = $property->name;
+                    }
+
+                    // 解析属性类型
+                    $definitions[$property->name] = 'string'; // 默认类型
+                    $doc = $property->getDocComment();
+                    if (!empty($doc)) {
+                        $docLines = explode("\n", $doc);
+                        foreach ($docLines as $line) {
+                            if (preg_match('/@var\s+([^\s]*)(\s+.*)?$/', $line, $match)) {
+                                array_shift($match);
+                                $type = array_shift($match);
+                                if ($type) {
+                                    if (substr($type, -2) == '[]') {
+                                        $realType = substr($type, 0, -2);
+                                    } else {
+                                        $realType = $type;
+                                    }
+
+                                    // 标量类型
+                                    if (array_key_exists($realType, $this->filters) || is_a($realType, StructInterface::class, true)) {
+                                        $definitions[$property->name] = $type;
+                                        break;
+                                    }
+
+                                    // Add Current NamespaceName
+                                    $fullClass = $namespace . '\\' . $realType;
+                                    if (is_a($fullClass, StructInterface::class, true)) {
+                                        $definitions[$property->name] = $namespace . '\\' . $type;
+                                        break;
+                                    }
+
+                                    throw new \RuntimeException("[" . get_class($struct) . "] Type '$type' not allowed in struct");
                                 }
-
-                                // 标量类型
-                                if (array_key_exists($realType, $this->filters) || is_a($realType, StructInterface::class, true)) {
-                                    $definitions[$property->name] = $type;
-                                    break;
-                                }
-
-                                // Add Current NamespaceName
-                                $fullClass = $namespace . '\\' . $realType;
-                                if (is_a($fullClass, StructInterface::class, true)) {
-                                    $definitions[$property->name] = $namespace . '\\' . $type;
-                                    break;
-                                }
-
-                                throw new \RuntimeException("[" . get_class($struct) . "] Type '$type' not allowed in struct");
                             }
                         }
                     }
                 }
-
-                // 去除该属性，走__set/__get方法
-                unset($struct->{$property->name});
             }
+
+            $this->defaults[$className] = $defaults;
+            $this->protected[$className] = $protected;
+            $this->definitions[$className] = $definitions;
         }
 
-        $this->defaults[$className] = $defaults;
-        $this->protected[$className] = $protected;
-        $this->definitions[$className] = $definitions;
+        // 去除当前结构体对象的属性，让结构体的赋值取值使用__set/__get方法
+        foreach ($this->definitions[$className] as $property => $definition) {
+            unset($struct->{$property});
+        }
     }
 
     /**
