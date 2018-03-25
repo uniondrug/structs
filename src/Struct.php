@@ -45,7 +45,7 @@ abstract class Struct implements StructInterface, \Serializable, \JsonSerializab
         }
 
         $this->_structManager->initialize($this);
-        $this->init($this->getDefaults());
+        $this->_variables = $this->getDefaults();
 
         if ($data !== null) {
             $this->init($data);

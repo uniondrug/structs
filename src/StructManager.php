@@ -53,7 +53,7 @@ class StructManager extends Injectable
      *
      * @var array
      */
-    protected $reserved = ['_di', '_variables', '_dependencyInjector', '_structManager', '_reserved'];
+    protected $reserved = ['_variables', '_dependencyInjector', '_structManager'];
 
     /**
      * 类型过滤器，只支持如下类型，或者结构体，或者数组
@@ -234,6 +234,12 @@ class StructManager extends Injectable
             $protected = [];
             $definitions = [];
 
+            // 默认值
+            foreach ($this->reserved as $reserved) {
+                unset($defaults[$reserved]);
+            }
+
+            // 属性类型
             foreach ($properties as $property) {
                 if (!in_array($property->name, $this->reserved)) {
                     $definitions[$property->name] = $defaults[$property->name];
