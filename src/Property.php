@@ -317,6 +317,7 @@ class Property
             'float',
             'int',
             'integer',
+            'string',
             'null'
         ];
         if (in_array($type, $types)) {
@@ -342,6 +343,9 @@ class Property
                 break;
             case 'int' :
                 $type = 'integer';
+                break;
+            case 'str' :
+                $type = 'string';
                 break;
         }
         return $type;
