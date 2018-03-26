@@ -6,7 +6,7 @@
 namespace Uniondrug\Structs;
 
 /**
- * 发送分页请求
+ * 分页请求
  * @package Uniondrug\Structs
  */
 abstract class PagingRequest extends Struct
@@ -14,14 +14,14 @@ abstract class PagingRequest extends Struct
     /**
      * 请求页码
      * @var int
-     * @Validator(type=int,default=1,filter={int})
+     * @Validator(options={min:1})
      */
     public $page = 1;
 
     /**
      * 每页数量
      * @var int
-     * @Validator(type=int,default=10,filter={int})
+     * @Validator(options={min:1,max:50})
      */
     public $limit = 10;
 }

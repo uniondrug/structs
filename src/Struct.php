@@ -94,7 +94,7 @@ abstract class Struct implements StructInterface
         if ($data !== null) {
             $this->with($data);
         }
-        if ($end === true){
+        if ($end === true) {
             $this->endWith();
         }
     }
@@ -365,10 +365,11 @@ abstract class Struct implements StructInterface
             // 1. 清除属性定义, 让__get/__set生效
             unset($this->{$name});
             /**
+             * 构造实例时原始数据不验证
              * @var Property $property
              */
             $property = self::$_reflections[$this->className][$name];
-            $this->setValue($name, $property->getDefaultValue());
+            $this->attributes[$name] = $property->getDefaultValue();
         }
     }
 
@@ -425,5 +426,4 @@ abstract class Struct implements StructInterface
         }
         return $data;
     }
-
 }

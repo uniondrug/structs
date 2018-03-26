@@ -12,10 +12,26 @@ use Uniondrug\Validation\Param;
  */
 class Property
 {
+    /**
+     * 解析注释中的分组
+     * eg. name={values}
+     * @var string
+     */
     private static $commentRegexpGroup = "/([_a-z0-9]+)\s*=\s*\{([^\}]*)\}/i";
 
+    /**
+     * 解析注释分组中的元素
+     * eg. name:value
+     * @var string
+     */
     private static $commentRegexpGroupItem = "/([_a-z0-9]+)\s*:\s*([_a-z0-9]+)/i";
 
+    /**
+     * 单级解析
+     * eg. name=value
+     *     name
+     * @var string
+     */
     private static $commentRegexpSingle = "/([_a-z0-9]+)\s*[=]*\s*([_a-z0-9]*)/i";
 
     /**
@@ -28,10 +44,10 @@ class Property
      * 验证器定义匹配
      * @var string
      */
-    private static $commentRegexpValidator = "/@validator\(([^\)]*)\)/";
+    private static $commentRegexpValidator = "/@validator\(([^\)]*)\)/i";
 
     /**
-     * 默认值
+     * 自定义的默认值
      * @var mixed
      */
     private $defaultValue;
@@ -40,13 +56,13 @@ class Property
      * 是否为数组
      * @var bool
      */
-    private $isArrayType = false;
+    private $arrayType = false;
 
     /**
      * 是否为结构体
      * @var bool
      */
-    private $isStructType = false;
+    private $structType = false;
 
     /**
      * @var string
@@ -115,16 +131,16 @@ class Property
     }
 
     /**
-     * 是否为数组类型
+     * 属性是否为数组
      * @return bool
      */
     public function isArray()
     {
-        return $this->isArrayType;
+        return $this->arrayType;
     }
 
     /**
-     * 指定字段是否为必须
+     * 属性值是否必填
      * @return mixed
      */
     public function isRequired()
@@ -133,16 +149,26 @@ class Property
     }
 
     /**
-     * 是否为结构体类型
+     * 是否数据是否用于存储结构体
      * @return bool
      */
     public function isStruct()
     {
-        return $this->isStructType;
+        return $this->structType;
+    }
+
+    /**
+     * 属性数据类型是否为系统类型
+     * @return bool
+     */
+    public function isSystemType()
+    {
+        return $this->systemType;
     }
 
     /**
      * 数据验证
+     * @param mixed $value
      */
     public function validate($value)
     {
@@ -172,10 +198,10 @@ class Property
         if (preg_match(self::$commentRegexpType, $comment, $m) > 0) {
             // 2.1 is array
             if ($m[2] === '[]') {
-                $this->isArrayType = true;
+                $this->arrayType = true;
             }
             // 2.2 type name
-            if ($this->isSystemType($m[1])) {
+            if ($this->filterSystemType($m[1])) {
                 $this->type = $this->toSystemType($m[1]);
             } else {
                 $this->type = $m[1][0] == '\\' ? $m[1] : '\\'.$namespace.'\\'.$m[1];
@@ -201,11 +227,11 @@ class Property
             $setter = true;
             if ($this->defaultValue !== null) {
                 $type = gettype($defaultValue);
-                if ($this->isSystemType($type)) {
+                if ($this->filterSystemType($type)) {
                     $setter = false;
                     $this->type = $type;
                     if ($this->type === 'array') {
-                        $this->isArrayType = true;
+                        $this->arrayType = true;
                     }
                 } else if ($type == 'object') {
                     $this->type = get_class($defaultValue);
@@ -220,7 +246,7 @@ class Property
             return;
         }
         // 4. set default values by system type
-        if ($this->isArrayType) {
+        if ($this->arrayType) {
             $defaultValue = [];
         } else {
             switch ($this->type) {
@@ -250,7 +276,7 @@ class Property
         if ($this->systemType) {
             return;
         }
-        $this->isStructType = is_a($this->type, StructInterface::class, true);
+        $this->structType = is_a($this->type, StructInterface::class, true);
     }
 
     /**
@@ -307,7 +333,7 @@ class Property
      * @param string $type
      * @return bool
      */
-    private function isSystemType(string $type)
+    private function filterSystemType(string $type)
     {
         $types = [
             'array',

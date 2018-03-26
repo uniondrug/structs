@@ -20,36 +20,43 @@ final class PagingResult extends Struct
 {
     /**
      * @var int
+     * @validator(options={min:1})
      */
     protected $first = 1;
 
     /**
      * @var int
+     * @validator(options={min:0})
      */
     protected $before;
 
     /**
      * @var int
+     * @validator(options={min:0})
      */
     protected $current;
 
     /**
      * @var int
+     * @validator(options={min:0})
      */
     protected $last;
 
     /**
      * @var int
+     * @validator(options={min:0})
      */
     protected $next;
 
     /**
      * @var int
+     * @validator(options={min:0})
      */
     protected $totalPages;
 
     /**
      * @var int
+     * @validator(options={min:0})
      */
     protected $totalItems;
 }
