@@ -17,13 +17,14 @@ abstract class PaginatorStruct extends Struct
     public $paging;
 
     /**
-     * @param array|null|object $data
+     * @param null|array|object $data 入参数据类型
+     * @param bool              $end  将入参赋值之后是否检查必须字段
      * @throws \Exception
      */
-    public function __construct($data)
+    public function __construct($data, $end = true)
     {
         // 1. 对象实例化
-        parent::__construct(null);
+        parent::__construct(null, false);
         $this->hasListProperty();
         $this->hasPagingProperty();
         // 2. 数据格式不合法
@@ -42,5 +43,9 @@ abstract class PaginatorStruct extends Struct
         ]);
         // 4. 数据列表赋值
         $this->with([static::STRUCT_LIST_COLUMN => $data->items]);
+        // 5. End
+        if ($end === true) {
+            $this->endWith();
+        }
     }
 }

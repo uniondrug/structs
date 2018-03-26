@@ -48,6 +48,12 @@ abstract class Struct implements StructInterface
     private static $_reflections = [];
 
     /**
+     * 必须字段记录
+     * @var array
+     */
+    private static $_requireds = [];
+
+    /**
      * 属性与值关系
      * $attributes = {
      *     'id' => 1,
@@ -67,24 +73,29 @@ abstract class Struct implements StructInterface
 
     /**
      * 结构体静态构造方法
-     * @param null|array|object $data 工厂模式入参
+     * @param null|array|object $data 入参数据类型
+     * @param bool              $end  将入参赋值之后是否检查必须字段
      * @return static
      */
-    public static function factory($data = null)
+    public static function factory($data = null, $end = true)
     {
-        return new static($data);
+        return new static($data, $end);
     }
 
     /**
      * 构造Struct结构体
-     * @param null|array|object $data 工厂模式入参
+     * @param null|array|object $data 入参数据类型
+     * @param bool              $end  将入参赋值之后是否检查必须字段
      */
-    public function __construct($data)
+    public function __construct($data, $end = true)
     {
         $this->initRefelection();
         $this->initDefaultValue();
         if ($data !== null) {
             $this->with($data);
+        }
+        if ($end === true){
+            $this->endWith();
         }
     }
 
@@ -208,6 +219,19 @@ abstract class Struct implements StructInterface
     public function isReadonlyProperty($name)
     {
         return self::$_properties[$this->className][$name];
+    }
+
+    /**
+     * 必填项是否已填
+     */
+    public function endWith()
+    {
+        foreach (self::$_requireds[$this->className] as $name) {
+            $property = $this->getProperty($name);
+            if ($property->isRequired() && $this->{$name} === '') {
+                throw new \Exception("必须字段'{$name}'未填写");
+            }
+        }
     }
 
     /**
@@ -362,6 +386,7 @@ abstract class Struct implements StructInterface
         // 3. 反射过程
         self::$_properties[$this->className] = [];
         self::$_reflections[$this->className] = [];
+        self::$_requireds[$this->className] = [];
         $reflect = new \ReflectionClass($this);
         $namespace = $reflect->getNamespaceName();
         foreach ($reflect->getProperties() as $prop) {
@@ -374,8 +399,13 @@ abstract class Struct implements StructInterface
                 continue;
             }
             // 3.3 加入反射记录
+            $property = new Property($prop, $namespace, $this->{$prop->name});
             self::$_properties[$this->className][$prop->name] = $prop->isProtected();
-            self::$_reflections[$this->className][$prop->name] = new Property($prop, $namespace, $this->{$prop->name});
+            self::$_reflections[$this->className][$prop->name] = $property;
+            // 3.4 必须字段集
+            if ($property->isRequired()) {
+                self::$_requireds[$this->className][] = $prop->name;
+            }
         }
     }
 
@@ -395,4 +425,5 @@ abstract class Struct implements StructInterface
         }
         return $data;
     }
+
 }

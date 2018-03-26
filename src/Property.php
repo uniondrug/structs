@@ -5,11 +5,19 @@
  */
 namespace Uniondrug\Structs;
 
+use Uniondrug\Validation\Param;
+
 /**
  * @package Uniondrug\Structs
  */
 class Property
 {
+    private static $commentRegexpGroup = "/([_a-z0-9]+)\s*=\s*\{([^\}]*)\}/i";
+
+    private static $commentRegexpGroupItem = "/([_a-z0-9]+)\s*:\s*([_a-z0-9]+)/i";
+
+    private static $commentRegexpSingle = "/([_a-z0-9]+)\s*[=]*\s*([_a-z0-9]*)/i";
+
     /**
      * 类型定义匹配
      * @var string
@@ -46,6 +54,18 @@ class Property
     private $name;
 
     /**
+     * 验证器规则
+     * @var array
+     */
+    private $rule = [
+        'type' => [],
+        'options' => [],
+        'filters' => [],
+        'required' => false,
+        'empty' => true
+    ];
+
+    /**
      * 类型名称
      * <code>
      * $type = 'integer';
@@ -73,6 +93,7 @@ class Property
         $this->initComment($prop, $namespace);
         $this->initDefaultValue($defaultValue);
         $this->initStructType();
+        $this->initDefaultValidator();
     }
 
     /**
@@ -103,6 +124,15 @@ class Property
     }
 
     /**
+     * 指定字段是否为必须
+     * @return mixed
+     */
+    public function isRequired()
+    {
+        return $this->rule['required'];
+    }
+
+    /**
      * 是否为结构体类型
      * @return bool
      */
@@ -116,6 +146,13 @@ class Property
      */
     public function validate($value)
     {
+        // 1. 非系统类型时忽略
+        //    还不是最小化的字段
+        if (!$this->systemType || count($this->rule['type']) === 0) {
+            return;
+        }
+        // 2. validator
+        Param::check([$this->name => $value], [$this->name => $this->rule]);
     }
 
     /**
@@ -221,8 +258,48 @@ class Property
      * @param string $comment
      * @example $this->initValidator("type=integer,options={min:1,max:10},required,empty")
      */
-    private function initValidator($comment)
+    private function initValidator(string $comment)
     {
+        $obj = $this;
+        // 1. collect group
+        $comment = preg_replace_callback(static::$commentRegexpGroup, function($args) use (& $obj){
+            $name = $args[1];
+            $value = $args[2];
+            if ($name == 'type' || $name == 'filters') {
+                $obj->rule[$name] = explode(',', $value);
+            } else if ($name === 'options') {
+                $options = [];
+                if (preg_match_all(static::$commentRegexpGroupItem, $value, $m) > 0) {
+                    foreach ($m[1] as $i => $key) {
+                        $options[$key] = $m[2][$i];
+                    }
+                }
+                $obj->rule[$name] = $options;
+            }
+            return '';
+        }, $comment);
+        // 2. collect single
+        if (preg_match_all(static::$commentRegexpSingle, $comment, $m) > 0) {
+            foreach ($m[1] as $i => $name) {
+                if ($name == 'type') {
+                    $this->rule[$name] = [$m[2][$i]];
+                } else if ($name == 'required' || $name == 'empty') {
+                    $value = strtolower($m[2][$i]) === 'false' ? false : true;
+                    $this->rule[$name] = $value;
+                }
+            }
+        }
+    }
+
+    /**
+     * 启用默认验证器
+     * 强类型控制
+     */
+    private function initDefaultValidator()
+    {
+        if (count($this->rule['type']) === 0 && $this->type !== null) {
+            $this->rule['type'][] = $this->type;
+        }
     }
 
     /**
@@ -230,7 +307,7 @@ class Property
      * @param string $type
      * @return bool
      */
-    private function isSystemType($type)
+    private function isSystemType(string $type)
     {
         $types = [
             'array',
@@ -244,19 +321,17 @@ class Property
         ];
         if (in_array($type, $types)) {
             $this->systemType = true;
-
             return true;
         }
-
         return false;
     }
 
     /**
      * 转标准类型名称
-     * @param $type
+     * @param string $type
      * @return string
      */
-    private function toSystemType($type)
+    private function toSystemType(string $type)
     {
         switch ($type) {
             case 'bool' :
@@ -269,7 +344,6 @@ class Property
                 $type = 'integer';
                 break;
         }
-
         return $type;
     }
 }
