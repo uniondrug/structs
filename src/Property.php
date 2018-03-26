@@ -70,6 +70,11 @@ class Property
     private $name;
 
     /**
+     * @var string
+     */
+    private $className;
+
+    /**
      * 验证器规则
      * @var array
      */
@@ -98,7 +103,6 @@ class Property
     private $systemType = false;
 
     /**
-     * Property constructor.
      * @param \ReflectionProperty $prop
      * @param string              $namespace
      * @param mixed               $defaultValue
@@ -106,6 +110,7 @@ class Property
     public function __construct(\ReflectionProperty $prop, string $namespace, $defaultValue)
     {
         $this->name = $prop->name;
+        $this->className = $prop->class;
         $this->initComment($prop, $namespace);
         $this->initDefaultValue($defaultValue);
         $this->initStructType();
@@ -202,6 +207,9 @@ class Property
             }
             // 2.2 type name
             if ($this->filterSystemType($m[1])) {
+                if ($m[1] === 'array') {
+                    throw new Exception("属性'{$this->className}::\${$this->name}'禁止使用'@var array'注解");
+                }
                 $this->type = $this->toSystemType($m[1]);
             } else {
                 $this->type = $m[1][0] == '\\' ? $m[1] : '\\'.$namespace.'\\'.$m[1];
@@ -329,7 +337,8 @@ class Property
     }
 
     /**
-     * 是否为系统类型
+     * 过滤为系统类型
+     * @link http://php.net/manual/zh/function.gettype.php
      * @param string $type
      * @return bool
      */
@@ -346,7 +355,7 @@ class Property
             'string',
             'null'
         ];
-        if (in_array($type, $types)) {
+        if (in_array(strtolower($type), $types)) {
             $this->systemType = true;
             return true;
         }
@@ -354,9 +363,10 @@ class Property
     }
 
     /**
-     * 转标准类型名称
+     * 简写类型转标准类型名称
      * @param string $type
      * @return string
+     * @example $this->toSystemType('int'); // integer
      */
     private function toSystemType(string $type)
     {

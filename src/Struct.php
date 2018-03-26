@@ -102,12 +102,12 @@ abstract class Struct implements StructInterface
     /**
      * @param string $name
      * @return mixed
-     * @throws \Exception
+     * @throws Exception
      */
     public function & __get($name)
     {
         if (!$this->hasProperty($name)) {
-            throw new \Exception("can not call undefined property '{$this->className}::\${$name}'");
+            throw new Exception("禁止读取未定义属性'{$this->className}::\${$name}'的值");
         }
         return $this->attributes[$name];
     }
@@ -115,17 +115,26 @@ abstract class Struct implements StructInterface
     /**
      * @param string $name
      * @param mixed  $value
-     * @throws \Exception
+     * @throws Exception
      */
     public function __set($name, $value)
     {
         if (!$this->hasProperty($name)) {
-            throw new \Exception("can not set undefined property '{$this->className}::\${$name}' value");
+            throw new Exception("禁止设置未定义属性'{$this->className}::\${$name}'的值");
         }
         if ($this->isReadonlyProperty($name)) {
-            throw new \Exception("can not set readonly property '{$this->className}::\${$name}' value");
+            throw new Exception("禁止设置只读属性'{$this->className}::\${$name}'的值");
         }
         $this->setValue($name, $value);
+    }
+
+    /**
+     * 实现类名
+     * @return string
+     */
+    public function getClassName()
+    {
+        return $this->className;
     }
 
     /**
@@ -140,43 +149,43 @@ abstract class Struct implements StructInterface
 
     /**
      * 是否已定义列表必须定段
-     * @throws \Exception
+     * @throws Exception
      */
     public function hasListProperty()
     {
         if (!isset(self::$_properties[$this->className][static::STRUCT_LIST_COLUMN])) {
-            throw new \Exception("property '{$this->className}::\$".static::STRUCT_LIST_COLUMN."' is not defined");
+            throw new Exception("属性'{$this->className}::\$".static::STRUCT_LIST_COLUMN."'未定义");
         }
         /**
          * @var Property $property
          */
         $property = self::$_reflections[$this->className][static::STRUCT_LIST_COLUMN];
         if (!$property->isStruct()) {
-            throw new \Exception("property '{$this->className}::\$".static::STRUCT_LIST_COLUMN."' must implement with StructInterface");
+            throw new Exception("属性'{$this->className}::\$".static::STRUCT_LIST_COLUMN."'必须实现'StructInterface'接口");
         }
         /**
          * comment format
          */
         if (!$property->isArray()) {
-            throw new \Exception("property '{$this->className}::\$".static::STRUCT_LIST_COLUMN."' must be array, end with '[]'.");
+            throw new Exception("属性'{$this->className}::\$".static::STRUCT_LIST_COLUMN."'的数据必须是可迭代的, 注解定义时请以'[]'结尾.");
         }
     }
 
     /**
      * 是否已定义分页必须定段
-     * @throws \Exception
+     * @throws Exception
      */
     public function hasPagingProperty()
     {
         if (!isset(self::$_properties[$this->className][static::STRUCT_PAGING_COLUMN])) {
-            throw new \Exception("property '{$this->className}::\$".static::STRUCT_PAGING_COLUMN."' is not defined");
+            throw new Exception("属性'{$this->className}::\$".static::STRUCT_PAGING_COLUMN."'未定义");
         }
         /**
          * @var Property $property
          */
         $property = self::$_reflections[$this->className][static::STRUCT_PAGING_COLUMN];
         if (!$property->isStruct() || $property->isArray()) {
-            throw new \Exception("property '{$this->className}::\$".static::STRUCT_PAGING_COLUMN."' must extends with PagingResult");
+            throw new Exception("属性'{$this->className}::\$".static::STRUCT_PAGING_COLUMN."'必须继承'PagingResult'对象");
         }
     }
 
@@ -229,7 +238,7 @@ abstract class Struct implements StructInterface
         foreach (self::$_requireds[$this->className] as $name) {
             $property = $this->getProperty($name);
             if ($property->isRequired() && $this->{$name} === '') {
-                throw new \Exception("必须字段'{$name}'未填写");
+                throw new Exception("属性'{$this->className}::\${$name}'没有正确赋值");
             }
         }
     }
@@ -249,14 +258,15 @@ abstract class Struct implements StructInterface
      * @param int $options
      * @param int $depth
      * @return string
+     * @throws Exception
      */
     public function toJson($options = 0, $depth = 512)
     {
-        try {
-            return \GuzzleHttp\json_encode($this->toArray(), $options, $depth);
-        } catch(\Exception $e) {
-            return '{}';
+        $json = json_encode($this->toArray(), $options, $depth);
+        if (json_last_error() === JSON_ERROR_NONE) {
+            return $json;
         }
+        throw new Exception("结构体'{$this->className}'转为JSON数据出错 - ".json_last_error_msg());
     }
 
     /**
@@ -318,7 +328,7 @@ abstract class Struct implements StructInterface
      * 设置属性值
      * @param string $name
      * @param mixed  $value
-     * @throws \Exception
+     * @throws Exception
      */
     private function setValue($name, $value)
     {
@@ -331,7 +341,7 @@ abstract class Struct implements StructInterface
         if ($property->isArray()) {
             // 1.2 不可迭代的数据类型
             if (!$this->isIteratorAble($value)) {
-                throw new \Exception("value for '{$this->className}::{$name}' should be array");
+                throw new Exception("属性'{$this->className}::{$name}'的值必须是可迭代的数据格式");
             }
             // 1.3 结构体递归
             if ($property->isStruct()) {

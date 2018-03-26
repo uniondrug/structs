@@ -14,7 +14,7 @@ abstract class ListStruct extends Struct
     /**
      * @param null|array|object $data 入参数据类型
      * @param bool              $end  将入参赋值之后是否检查必须字段
-     * @throws \Exception
+     * @throws Exception
      */
     public function __construct($data, $end = true)
     {
@@ -23,7 +23,7 @@ abstract class ListStruct extends Struct
         $this->hasListProperty();
         // 2. 数据格式不合法
         if (!$this->isIteratorAble($data)) {
-            throw new \Exception("data for '".static::STRUCT_LIST_COLUMN."' can not iterator able");
+            throw new Exception("用于属性'{$this->getClassName()}::\$".static::STRUCT_LIST_COLUMN."'的数据源不是可迭格式");
         }
         // 3. 数据赋值
         $this->with([static::STRUCT_LIST_COLUMN => $data]);
