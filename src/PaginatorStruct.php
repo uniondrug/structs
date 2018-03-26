@@ -1,55 +1,46 @@
 <?php
 /**
- * 分页结构体基类，用于输出分页数据。
- * 将 Phalcon 的 Paginator 结果转换成结构体。
- * 定义分页结构体时，必须定义一个属性`body`，类型为数组。内容是分页输出的格式。
+ * @author wsfuyibing <websearch@163.com>
+ * @date   2018-03-26
  */
-
 namespace Uniondrug\Structs;
 
+/**
+ * 分页数据结构体
+ * @package Uniondrug\Structs
+ */
 abstract class PaginatorStruct extends Struct
 {
     /**
-     * @var \Uniondrug\Structs\PagingStruct
+     * @var \Uniondrug\Structs\PagingResult
      */
     public $paging;
 
     /**
-     * @param object $data Paginator Object
-     *
-     * @return static
+     * @param array|null|object $data
+     * @throws \Exception
      */
-    public static function factory($data = null)
+    public function __construct($data)
     {
-        // if (!is_object($data) || !property_exists($data, 'items') || property_exists($data, 'first')) {
-        //    throw new \RuntimeException('input data must be an Paginator object');
-        // }
-        $struct = new static();
-
-        if (!$struct->has('body')) {
-            throw new \RuntimeException('Property \'body\' for \'' . get_class($struct) . '\' must be defined');
+        // 1. 对象实例化
+        parent::__construct(null);
+        $this->hasListProperty();
+        $this->hasPagingProperty();
+        // 2. 数据格式不合法
+        if (!property_exists($data, 'items') || !$this->isIteratorAble($data->items)) {
+            throw new \Exception("data for '".static::STRUCT_LIST_COLUMN."' can not iterator able");
         }
-        if (substr($struct->getDefinition('body'), -2) != '[]') {
-            throw new \RuntimeException('Property \'body\' for \'' . get_class($struct) . '\' must be defined as an array (end with [])');
-        }
-
-        // 分页结构
-        $struct->paging = PagingStruct::factory([
-            'first'      => $data->first,
-            'before'     => $data->before,
-            'current'    => $data->current,
-            'next'       => $data->next,
-            'last'       => $data->last,
+        // 3. 分页参数赋值
+        $this->paging = PagingResult::factory([
+            'first' => $data->first,
+            'before' => $data->before,
+            'current' => $data->current,
+            'next' => $data->next,
+            'last' => $data->last,
             'totalPages' => $data->total_pages,
-            'totalItems' => $data->total_items,
+            'totalItems' => $data->total_items
         ]);
-
-        // 数据
-        $dataType = substr($struct->getDefinition('body'), 0, -2);
-        foreach ($data->items as $item) {
-            $struct->body[] = $dataType::factory($item);
-        }
-
-        return $struct;
+        // 4. 数据列表赋值
+        $this->with([static::STRUCT_LIST_COLUMN => $data->items]);
     }
 }
