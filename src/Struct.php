@@ -12,22 +12,27 @@ abstract class Struct implements StructInterface
 {
     /**
      * 分页与列表时的主数据字段名
+     * 在定义结构时需使用@var指向结构体
+     * 并且要以[]结束, 表示多条记录列表
      */
     const STRUCT_LIST_COLUMN = "body";
 
     /**
      * 分页时记录分页参数字段名
+     * 在分页结构中记录当前页码、总页数
+     * 记录数等
      */
     const STRUCT_PAGING_COLUMN = "paging";
 
     /**
-     * 属性列表
-     * 值true表示为只读属性, false表示读写属性
+     * 属性记录
+     * 按结构体类名识别各结构体有哪些属性
+     * 其值为true时表示为只读属性, false表示读写属性
      * <code>
      * $_properties = [
      *     'NS\\ClassName' => [
-     *         'public' => false,
-     *         'protected' => true
+     *         'public' => false,   // 读取
+     *         'protected' => true  // 只读
      *     ]
      * ];
      * </code>
@@ -37,6 +42,7 @@ abstract class Struct implements StructInterface
 
     /**
      * 反射记录
+     * 按结构体类名记录各结构体的属性对象
      * $_reflections = [
      *     'NS\\ClassName' => [
      *         'public' => Property{},
@@ -49,12 +55,22 @@ abstract class Struct implements StructInterface
 
     /**
      * 必须字段记录
+     * 按结构体类名记录各结构体的必填属性列表
+     * <code>
+     * $_requireds = [
+     *     'NS\\ClassName' => [
+     *         'id',
+     *         'status'
+     *      ]
+     * ]
+     * </code>
      * @var array
      */
     private static $_requireds = [];
 
     /**
      * 属性与值关系
+     * 即各属性赋值后的结果
      * $attributes = {
      *     'id' => 1,
      *     'sub' => StructInterface{
@@ -66,7 +82,10 @@ abstract class Struct implements StructInterface
     private $attributes = [];
 
     /**
-     * 反射类名
+     * 结构体完整类名
+     * <code>
+     * $className = '\App\Structs\Results\Module\Row'
+     * </code>
      * @var string
      */
     private $className;
