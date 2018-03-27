@@ -24,7 +24,7 @@ class Property
      * eg. name:value
      * @var string
      */
-    private static $commentRegexpGroupItem = "/([_a-z0-9]+)\s*:\s*([_a-z0-9]+)/i";
+    private static $commentRegexpGroupItem = "/([_a-z0-9]+)\s*:\s*([:_a-z0-9\-\s\\\\]+)/i";
 
     /**
      * 单级解析
@@ -32,7 +32,7 @@ class Property
      *     name
      * @var string
      */
-    private static $commentRegexpSingle = "/([_a-z0-9]+)\s*[=]*\s*([_a-z0-9]*)/i";
+    private static $commentRegexpSingle = "/([_a-z0-9]+)\s*[=]*\s*([:_a-z0-9\-\s\\\\]*)/i";
 
     /**
      * 类型定义匹配
@@ -295,6 +295,7 @@ class Property
     private function initValidator(string $comment)
     {
         $obj = $this;
+        $comment = preg_replace("/\"|'/", '', $comment);
         // 1. collect group
         $comment = preg_replace_callback(static::$commentRegexpGroup, function($args) use (& $obj){
             $name = $args[1];
