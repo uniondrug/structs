@@ -12,51 +12,50 @@ namespace Uniondrug\Structs;
  * @property int $current
  * @property int $next
  * @property int $last
+ * @property int $limit
  * @property int $totalPages
  * @property int $totalItems
  * @package Uniondrug\Structs
  */
-final class PagingResult extends Struct
+class PagingResult extends Struct
 {
     /**
      * @var int
-     * @validator(options={min:1})
      */
-    protected $first = 1;
+    protected $first;
 
     /**
      * @var int
-     * @validator(options={min:0})
      */
     protected $before;
 
     /**
      * @var int
-     * @validator(options={min:0})
      */
     protected $current;
 
     /**
      * @var int
-     * @validator(options={min:0})
      */
     protected $last;
 
     /**
      * @var int
-     * @validator(options={min:0})
      */
     protected $next;
 
     /**
      * @var int
-     * @validator(options={min:0})
+     */
+    protected $limit = 0;
+
+    /**
+     * @var int
      */
     protected $totalPages;
 
     /**
      * @var int
-     * @validator(options={min:0})
      */
     protected $totalItems;
 }
