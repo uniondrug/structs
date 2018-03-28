@@ -1,405 +1,475 @@
 <?php
 /**
- * 结构体，用于定于交互数据结构。
+ * @author wsfuyibing <websearch@163.com>
+ * @date   2018-03-26
  */
-
 namespace Uniondrug\Structs;
 
-use Uniondrug\Framework\Container;
-use Uniondrug\Validation\Param;
-
-abstract class Struct implements StructInterface, \Serializable, \JsonSerializable
+/**
+ * @package Uniondrug\Structs
+ */
+abstract class Struct implements StructInterface
 {
     /**
-     * 容器
-     *
-     * @var Container
+     * 分页与列表时的主数据字段名
+     * 在定义结构时需使用@var指向结构体
+     * 并且要以[]结束, 表示多条记录列表
      */
-    protected $_dependencyInjector;
+    const STRUCT_LIST_COLUMN = "body";
 
     /**
-     * 结构体管理服务
-     *
-     * @var \Uniondrug\Structs\StructManager
+     * 分页时记录分页参数字段名
+     * 在分页结构中记录当前页码、总页数
+     * 记录数等
      */
-    protected $_structManager;
+    const STRUCT_PAGING_COLUMN = "paging";
 
     /**
-     * 结构体的实际内容
-     *
+     * 属性记录
+     * 按结构体类名识别各结构体有哪些属性
+     * 其值为true时表示为只读属性, false表示读写属性
+     * <code>
+     * $_properties = [
+     *     'NS\\ClassName' => [
+     *         'public' => false,   // 读取
+     *         'protected' => true  // 只读
+     *     ]
+     * ];
+     * </code>
      * @var array
      */
-    protected $_variables = [];
+    private static $_properties = [];
 
     /**
-     * 构造函数，初始化结构体。
-     *
-     * @param null|array|object $data
+     * 反射记录
+     * 按结构体类名记录各结构体的属性对象
+     * $_reflections = [
+     *     'NS\\ClassName' => [
+     *         'public' => Property{},
+     *         'protected' => Property{}
+     *     ]
+     * ]
+     * @var array
      */
-    public function __construct($data = null)
-    {
-        $this->_dependencyInjector = Container::getDefault();
-        $this->_structManager = $this->_dependencyInjector->getShared('structManager');
-        if (!is_object($this->_structManager)) {
-            throw new \RuntimeException('The injected service \'structManager\' is not valid');
-        }
-
-        $this->_structManager->initialize($this);
-        $this->_variables = $this->getDefaults();
-
-        if ($data !== null) {
-            $this->init($data);
-        }
-    }
+    private static $_reflections = [];
 
     /**
-     * 静态构造方法
-     *
-     * @param null|array|object $data
-     *
+     * 必须字段记录
+     * 按结构体类名记录各结构体的必填属性列表
+     * true: 表示该字段必须要填写
+     * false: 可以不必传而跳过
+     * <code>
+     * $_requireds = [
+     *     'NS\\ClassName' => [
+     *         'id' => true,
+     *         'status' => false
+     *      ]
+     * ]
+     * </code>
+     * @var array
+     */
+    private static $_requireds = [];
+
+    /**
+     * 属性与值关系
+     * 即各属性赋值后的结果
+     * $attributes = {
+     *     'id' => 1,
+     *     'sub' => StructInterface{
+     *         'id' => 0
+     *     }
+     * }
+     * @var array
+     */
+    private $attributes = [];
+
+    /**
+     * 已执行过setValue的属性列表
+     * <code>
+     * $requirements = [
+     *     'id' => true
+     * ]
+     * </code>
+     * @var array
+     */
+    private $requirements = [];
+
+    /**
+     * 结构体完整类名
+     * <code>
+     * $className = '\App\Structs\Results\Module\Row'
+     * </code>
+     * @var string
+     */
+    private $className;
+
+    /**
+     * 结构体静态构造方法
+     * @param null|array|object $data 入参数据类型
+     * @param bool              $end  将入参赋值之后是否检查必须字段
      * @return static
      */
-    public static function factory($data = null)
+    public static function factory($data = null, $end = true)
     {
-        return new static($data);
+        return new static($data, $end);
     }
 
     /**
-     * @param $name
-     *
-     * @return bool
-     * @deprecated
+     * 构造Struct结构体
+     * @param null|array|object $data 入参数据类型
+     * @param bool              $end  将入参赋值之后是否检查必须字段
      */
-    public static function reserved($name)
+    public function __construct($data, $end = true)
     {
-        return false;
-    }
-
-    /**
-     * 从一个对象或者数组初始化结构体
-     *
-     * @param array|object $data
-     */
-    public function init($data)
-    {
-        foreach ($this->getDefinitions() as $property => $type) {
-            if (is_array($data) && isset($data[$property])) {
-                $this->$property = $data[$property];
-            } elseif (is_object($data) && property_exists($data, $property)) {
-                $this->$property = $data->$property;
-            } elseif (is_object($data) && method_exists($data, $property)) {
-                $this->$property = $data->$property();
-            } elseif (is_object($data) && method_exists($data, 'get' . $property)) {
-                $method = 'get' . $property;
-                $this->$property = $data->$method();
-            } elseif (is_object($data)) {
-                // 对于提供魔术方法 __get 的对象
-                try {
-                    $this->$property = $data->$property;
-                } catch (\Throwable $e) {
-                    $this->$property = $this->getDefault($property);
-                }
-            } else {
-                $this->$property = $this->getDefault($property);
-            }
+        $this->initRefelection();
+        $this->initDefaultValue();
+        if ($data !== null) {
+            $this->with($data);
+        }
+        if ($end === true) {
+            $this->endWith();
         }
     }
 
     /**
-     * 检测一个属性是否存在
-     *
-     * @param $name
-     *
-     * @return bool
+     * @param string $name
+     * @return mixed
+     * @throws Exception
      */
-    public function has($name)
+    public function & __get($name)
     {
-        return $this->__isset($name);
+        if (!$this->hasProperty($name)) {
+            throw new Exception("禁止读取未定义属性'{$this->className}::\${$name}'的值");
+        }
+        return $this->attributes[$name];
     }
 
     /**
-     * 检测一个属性是否存在
-     *
-     * @param $name
-     *
+     * @param string $name
+     * @param mixed  $value
+     * @throws Exception
+     */
+    public function __set($name, $value)
+    {
+        if (!$this->hasProperty($name)) {
+            throw new Exception("禁止设置未定义属性'{$this->className}::\${$name}'的值");
+        }
+        if ($this->isReadonlyProperty($name)) {
+            throw new Exception("禁止设置只读属性'{$this->className}::\${$name}'的值");
+        }
+        $this->setValue($name, $value);
+    }
+
+    /**
+     * 实现类名
+     * @return string
+     */
+    public function getClassName()
+    {
+        return $this->className;
+    }
+
+    /**
+     * 按属性名读取Property对象
+     * @param string $name
+     * @return Property
+     */
+    public function getProperty($name)
+    {
+        return self::$_reflections[$this->className][$name];
+    }
+
+    /**
+     * 是否已定义列表必须定段
+     * @throws Exception
+     */
+    public function hasListProperty()
+    {
+        if (!isset(self::$_properties[$this->className][static::STRUCT_LIST_COLUMN])) {
+            throw new Exception("属性'{$this->className}::\$".static::STRUCT_LIST_COLUMN."'未定义");
+        }
+        /**
+         * @var Property $property
+         */
+        $property = self::$_reflections[$this->className][static::STRUCT_LIST_COLUMN];
+        if (!$property->isStruct()) {
+            throw new Exception("属性'{$this->className}::\$".static::STRUCT_LIST_COLUMN."'必须实现'StructInterface'接口");
+        }
+        /**
+         * comment format
+         */
+        if (!$property->isArray()) {
+            throw new Exception("属性'{$this->className}::\$".static::STRUCT_LIST_COLUMN."'的数据必须是可迭代的, 注解定义时请以'[]'结尾.");
+        }
+    }
+
+    /**
+     * 是否已定义分页必须定段
+     * @throws Exception
+     */
+    public function hasPagingProperty()
+    {
+        if (!isset(self::$_properties[$this->className][static::STRUCT_PAGING_COLUMN])) {
+            throw new Exception("属性'{$this->className}::\$".static::STRUCT_PAGING_COLUMN."'未定义");
+        }
+        /**
+         * @var Property $property
+         */
+        $property = self::$_reflections[$this->className][static::STRUCT_PAGING_COLUMN];
+        if (!$property->isStruct() || $property->isArray()) {
+            throw new Exception("属性'{$this->className}::\$".static::STRUCT_PAGING_COLUMN."'必须继承'PagingResult'对象");
+        }
+    }
+
+    /**
+     * 检查指定字段是否已定义
+     * @param string $name
      * @return bool
      */
     public function hasProperty($name)
     {
-        return $this->__isset($name);
+        return isset(self::$_properties[$this->className][$name]);
     }
 
     /**
-     * Alias of setProperty()
-     *
-     * @param $name
-     * @param $value
-     *
-     * @return $this
+     * 检查指定数据是否允许迭代
+     * @param $data
+     * @return bool
      */
-    public function set($name, $value)
+    public function isIteratorAble($data)
     {
-        $this->__set($name, $value);
-
-        return $this;
+        if (is_array($data)) {
+            return true;
+        }
+        if (is_object($data)) {
+            if ($data instanceof \ArrayAccess) {
+                return true;
+            }
+            if ($data instanceof \Iterator) {
+                return true;
+            }
+        }
+        return false;
     }
 
     /**
-     * 通过set()方法设置属性
-     *
-     * @param $name
-     * @param $value
-     *
-     * @return $this
+     * 检查属性是否为只读
+     * @param string $name
+     * @return bool
      */
-    public function setProperty($name, $value)
+    public function isReadonlyProperty($name)
     {
-        $this->__set($name, $value);
-
-        return $this;
+        return self::$_properties[$this->className][$name];
     }
 
     /**
-     * Alias of getProperty()
-     *
-     * @param $name
-     *
-     * @return mixed
+     * 必填项是否已填
      */
-    public function get($name)
+    public function endWith()
     {
-        return $this->__get($name);
+        foreach (self::$_requireds[$this->className] as $name => $required) {
+            // 1. 非必须字段
+            if (!$required) {
+                continue;
+            }
+            // 2. 检查是否传递
+            if (!isset($this->requirements[$name])) {
+                throw new Exception("必须的属性'{$this->className}::\${$name}'在入参中未定义");
+            }
+        }
     }
 
     /**
-     * 通过get()方法获取属性
-     *
-     * @param $name
-     *
-     * @return mixed
-     */
-    public function getProperty($name)
-    {
-        return $this->__get($name);
-    }
-
-    /**
-     * 获取所有属性及其定义
-     *
-     * @return mixed
-     */
-    public function getDefinitions()
-    {
-        return $this->_structManager->getDefinitions($this);
-    }
-
-    /**
-     * 获取指定属性的定义
-     *
-     * @param $name
-     *
-     * @return mixed
-     */
-    public function getDefinition($name)
-    {
-        return $this->_structManager->getDefinition($this, $name);
-    }
-
-    /**
-     * 返回所有属性及其默认值
-     *
-     * @return mixed
-     */
-    public function getDefaults()
-    {
-        return $this->_structManager->getDefaults($this);
-    }
-
-    /**
-     * 返回一个属性的默认值
-     *
-     * @param $name
-     *
-     * @return mixed
-     */
-    public function getDefault($name)
-    {
-        return $this->_structManager->getDefault($this, $name);
-    }
-
-    /**
-     * 返回全部验证规则
-     *
-     * @return array|mixed
-     */
-    public function getRules()
-    {
-        return $this->_structManager->getRules($this);
-    }
-
-    /**
-     * 返回属性的验证规则
-     *
-     * @param $name
-     *
-     * @return false|array
-     */
-    public function getRule($name)
-    {
-        return $this->_structManager->getRule($this, $name);
-    }
-
-    /**
-     * 获取所有的公共属性
-     *
-     * @return array
-     * @deprecated
-     */
-    public function getProperties()
-    {
-        return $this->_structManager->getDefinitions($this);
-    }
-
-    /**
-     * 转换成数组
-     *
+     * 转为数组输出
      * @return array
      */
     public function toArray()
     {
-        $data = [];
-        foreach ($this->_variables as $name => $value) {
-            $data[$name] = $this->_structManager->value($value);
-        }
-
-        return $data;
+        $data = $this->attributes;
+        return $this->parseArray($data);
     }
 
     /**
-     * 转换成JSON字符串
-     *
+     * 转JSON字符串
      * @param int $options
      * @param int $depth
-     *
      * @return string
+     * @throws Exception
      */
     public function toJson($options = 0, $depth = 512)
     {
-        return json_encode($this->toArray(), $options, $depth);
-    }
-
-    /**
-     * @return string
-     */
-    final public function __toString()
-    {
-        return $this->toJson();
-    }
-
-    /**
-     * @param $name
-     *
-     * @return bool
-     */
-    final public function __isset($name)
-    {
-        return $this->_structManager->has($this, $name);
-    }
-
-    /**
-     * @param $name
-     */
-    final public function __unset($name)
-    {
-        if (!$this->__isset($name)) {
-            throw new \RuntimeException('Property \'' . $name . '\' not exists');
+        $json = json_encode($this->toArray(), $options, $depth);
+        if (json_last_error() === JSON_ERROR_NONE) {
+            return $json;
         }
-
-        throw new \RuntimeException('Property \'' . $name . '\' cannot be unset');
+        throw new Exception("结构体'{$this->className}'转为JSON数据出错 - ".json_last_error_msg());
     }
 
     /**
-     * @param $name
-     *
-     * @return mixed
+     * 绑定Struct数据
+     * @param mixed $data
      */
-    final public function & __get($name)
+    public function with($data)
     {
-        if (!$this->__isset($name)) {
-            throw new \RuntimeException('Property \'' . $name . '\' not exists');
+        $type = gettype($data);
+        switch ($type) {
+            case 'array' :
+                $this->withArray($data);
+                break;
+            case 'object' :
+                $this->withObject($data);
+                break;
         }
-
-        return $this->_variables[$name];
     }
 
     /**
-     * @param $name
-     * @param $value
-     *
-     * @return void
+     * 使用数组赋值
+     * @param array $data
      */
-    final public function __set($name, $value)
+    private function withArray(array $data)
     {
-        if (!$this->__isset($name)) {
-            throw new \RuntimeException("[" . get_class($this) . "] Property \'' . $name . '\' not exists");
-        }
-
-        if ($this->isProtected($name)) {
-            throw new \RuntimeException("[" . get_class($this) . "] Property \'' . $name . '\' is readonly");
-        }
-
-        // 验证器验证
-        try {
-            $definition = $this->getDefinition($name);
-            if ($rule = $this->getRule($name)) {
-                $rules = [$name => $rule];
-                if (!isset($rules[$name]['type']) && in_array($definition, ['string', 'int', 'integer', 'float', 'double'])) {
-                    $rules[$name]['type'] = $definition;
-                }
-
-                $value = Param::check([$name => $value], $rules);
-                $value = $value[$name];
+        foreach (self::$_properties[$this->className] as $name => $readonly) {
+            // unset
+            if (!isset($data[$name])) {
+                continue;
             }
-
-            $this->_variables[$name] = $this->_structManager->convert($value, $definition);
-        } catch (\Exception $e) {
-            throw new \RuntimeException("[" . get_class($this) . "] Set property '$name' failed: " . $e->getMessage());
+            // setter
+            $this->setValue($name, $data[$name]);
         }
     }
 
     /**
-     * 是否是只读属性
-     *
-     * @param $name
-     *
-     * @return bool
+     * 使用对象赋值
+     * @param object $data
      */
-    protected function isProtected($name)
+    private function withObject($data)
     {
-        return $this->_structManager->isProtected($this, $name);
+        foreach (self::$_properties[$this->className] as $name => $readonly) {
+            // 1. from property
+            if (isset($data->{$name})) {
+                $this->setValue($name, $data->{$name});
+                continue;
+            }
+            // 2. from execute property
+            $method = 'get'.ucfirst($name);
+            if (method_exists($data, $method)) {
+                $this->setValue($name, $data->{$method}());
+                continue;
+            }
+            // 3. not support
+        }
     }
 
     /**
-     * @return string
+     * 设置属性值
+     * @param string $name
+     * @param mixed  $value
+     * @throws Exception
      */
-    public function serialize()
+    private function setValue($name, $value)
     {
-        return $this->toJson();
+        /**
+         * @var Property $property
+         */
+        $property = $this->getProperty($name);
+        $propertyType = $property->getType();
+        // 1. 数组字段赋值
+        if ($property->isArray()) {
+            // 1.2 不可迭代的数据类型
+            if (!$this->isIteratorAble($value)) {
+                throw new Exception("属性'{$this->className}::{$name}'的值必须是可迭代的数据格式");
+            }
+            // 1.3 结构体递归
+            if ($property->isStruct()) {
+                foreach ($value as $val) {
+                    $this->attributes[$name][] = call_user_func_array("{$propertyType}::factory", [$val]);
+                }
+            } else {
+                foreach ($value as $val) {
+                    $property->validate($val);
+                    $this->attributes[$name][] = $val;
+                }
+            }
+            // 1.4 completed
+            $this->requirements[$name] = true;
+            return;
+        }
+        // 2. 线性字段赋值
+        if ($property->isStruct()) {
+            $this->attributes[$name] = call_user_func_array("{$propertyType}::factory", [$value]);
+        } else {
+            $property->validate($value);
+            $this->attributes[$name] = $value;
+        }
+        $this->requirements[$name] = true;
     }
 
     /**
-     * @param string $serialized
+     * 设置各属性的默认值
      */
-    public function unserialize($serialized)
+    private function initDefaultValue()
     {
-        $this->init(json_decode($serialized));
+        foreach (self::$_properties[$this->className] as $name => $readonly) {
+            // 1. 清除属性定义, 让__get/__set生效
+            unset($this->{$name});
+            /**
+             * 构造实例时原始数据不验证
+             * @var Property $property
+             */
+            $property = self::$_reflections[$this->className][$name];
+            $this->attributes[$name] = $property->getDefaultValue();
+        }
     }
 
     /**
-     * @return mixed|string
+     * 初始化反射数据
      */
-    public function jsonSerialize()
+    private function initRefelection()
     {
-        return $this->toJson();
+        // 1. 当前Struct完整类名
+        $this->className = get_class($this);
+        // 2. 伪单例控制
+        if (isset(self::$_reflections[$this->className])) {
+            return;
+        }
+        // 3. 反射过程
+        self::$_properties[$this->className] = [];
+        self::$_reflections[$this->className] = [];
+        self::$_requireds[$this->className] = [];
+        $reflect = new \ReflectionClass($this);
+        $namespace = $reflect->getNamespaceName();
+        foreach ($reflect->getProperties() as $prop) {
+            // 3.1 属性过滤/只记录Struct和子类的属性
+            if (!is_a($prop->class, Struct::class, true)) {
+                continue;
+            }
+            // 3.2 过滤非Public/Protected属性
+            if (!$prop->isPublic() && !$prop->isProtected()) {
+                continue;
+            }
+            // 3.3 加入反射记录
+            $property = new Property($prop, $namespace, $this->{$prop->name});
+            self::$_properties[$this->className][$prop->name] = $prop->isProtected();
+            self::$_reflections[$this->className][$prop->name] = $property;
+            // 3.4 必须字段集
+            self::$_requireds[$this->className][$prop->name] = $property->isRequired();
+        }
+    }
+
+    /**
+     * 以递归模式将结构转为数组
+     * @param array $data
+     * @return array
+     */
+    private function parseArray($data)
+    {
+        foreach ($data as $name => & $value) {
+            if (is_array($value)) {
+                $value = $this->parseArray($value);
+            } else if (is_object($value) && method_exists($value, 'toArray')) {
+                $value = $value->toArray();
+            }
+        }
+        return $data;
     }
 }

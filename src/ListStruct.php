@@ -1,50 +1,35 @@
 <?php
 /**
- * 列表结构体基础。
- * 定义一个列表结构体时，必须定义一个属性`body`，类型是数组。
+ * @author wsfuyibing <websearch@163.com>
+ * @date   2018-03-26
  */
-
 namespace Uniondrug\Structs;
 
+/**
+ * 列表数据结构体
+ * @package Uniondrug\Structs
+ */
 abstract class ListStruct extends Struct
 {
     /**
-     * @param array $data
-     *
-     * @return static
+     * @param null|array|object $data 入参数据类型
+     * @param bool              $end  将入参赋值之后是否检查必须字段
+     * @throws Exception
      */
-    public static function factory($data = null)
+    public function __construct($data, $end = true)
     {
-        // param format check
-        $invalid = true;
-        if (is_array($data)) {
-            $invalid = false;
-        } else if (is_object($data)) {
-            if ($data instanceof \ArrayAccess || $data instanceof \Iterator) {
-                $invalid = false;
-            }
+        // 1. 对象实例化
+        parent::__construct(null, false);
+        $this->hasListProperty();
+        // 2. 数据格式不合法
+        if (!$this->isIteratorAble($data)) {
+            throw new Exception("用于属性'{$this->getClassName()}::\$".static::STRUCT_LIST_COLUMN."'的数据源不是可迭格式");
         }
-        if ($invalid) {
-            throw new \RuntimeException('data must be an array');
+        // 3. 数据赋值
+        $this->with([static::STRUCT_LIST_COLUMN => $data]);
+        // 4. end
+        if ($end === true) {
+            $this->endWith();
         }
-        // create
-        $struct = new static();
-        if (!$struct->has('body')) {
-            throw new \RuntimeException('Property \'body\' of \'' . get_class($struct) . '\' must be defined');
-        }
-        if (substr($struct->getDefinition('body'), -2) != '[]') {
-            throw new \RuntimeException('Property \'body\' of \'' . get_class($struct) . '\' must be defined as an array (end with [])');
-        }
-        $dataType = substr($struct->getDefinition('body'), 0, -2);
-        $isStruct = is_a($dataType, StructInterface::class, true);
-        foreach ($data as $item) {
-            if ($isStruct) {
-                $struct->body[] = $dataType::factory($item);
-            } else {
-                $struct->body[] = $item;
-            }
-        }
-
-        return $struct;
     }
 }
