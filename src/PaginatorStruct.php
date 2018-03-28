@@ -32,16 +32,18 @@ abstract class PaginatorStruct extends Struct
             throw new Exception("用于属性'{$this->getClassName()}::\$".static::STRUCT_LIST_COLUMN."'的数据源不是可迭格式");
         }
         // 3. 分页参数赋值
-        $this->with([static::STRUCT_PAGING_COLUMN => [
-            'first' => $data->first,
-            'before' => $data->before,
-            'current' => $data->current,
-            'last' => $data->last,
-            'next' => $data->next,
-            'limit' => $data->limit,
-            'totalPages' => $data->total_pages,
-            'totalItems' => $data->total_items
-        ]]);
+        $this->with([
+            static::STRUCT_PAGING_COLUMN => [
+                'first' => $data->first,
+                'before' => $data->before,
+                'current' => $data->current,
+                'last' => $data->last,
+                'next' => $data->next,
+                'limit' => $data->limit,
+                'totalPages' => $data->total_pages,
+                'totalItems' => $data->total_items
+            ]
+        ]);
         // 4. 数据列表赋值
         $this->with([static::STRUCT_LIST_COLUMN => $data->items]);
         // 5. End

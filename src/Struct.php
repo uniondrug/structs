@@ -56,11 +56,13 @@ abstract class Struct implements StructInterface
     /**
      * 必须字段记录
      * 按结构体类名记录各结构体的必填属性列表
+     * true: 表示该字段必须要填写
+     * false: 可以不必传而跳过
      * <code>
      * $_requireds = [
      *     'NS\\ClassName' => [
-     *         'id',
-     *         'status'
+     *         'id' => true,
+     *         'status' => false
      *      ]
      * ]
      * </code>
@@ -80,6 +82,17 @@ abstract class Struct implements StructInterface
      * @var array
      */
     private $attributes = [];
+
+    /**
+     * 已执行过setValue的属性列表
+     * <code>
+     * $requirements = [
+     *     'id' => true
+     * ]
+     * </code>
+     * @var array
+     */
+    private $requirements = [];
 
     /**
      * 结构体完整类名
@@ -254,10 +267,14 @@ abstract class Struct implements StructInterface
      */
     public function endWith()
     {
-        foreach (self::$_requireds[$this->className] as $name) {
-            $property = $this->getProperty($name);
-            if ($property->isRequired() && $this->{$name} === '') {
-                throw new Exception("属性'{$this->className}::\${$name}'没有正确赋值");
+        foreach (self::$_requireds[$this->className] as $name => $required) {
+            // 1. 非必须字段
+            if (!$required) {
+                continue;
+            }
+            // 2. 检查是否传递
+            if (!isset($this->requirements[$name])) {
+                throw new Exception("必须的属性'{$this->className}::\${$name}'在入参中未定义");
             }
         }
     }
@@ -374,6 +391,7 @@ abstract class Struct implements StructInterface
                 }
             }
             // 1.4 completed
+            $this->requirements[$name] = true;
             return;
         }
         // 2. 线性字段赋值
@@ -383,6 +401,7 @@ abstract class Struct implements StructInterface
             $property->validate($value);
             $this->attributes[$name] = $value;
         }
+        $this->requirements[$name] = true;
     }
 
     /**
@@ -433,9 +452,7 @@ abstract class Struct implements StructInterface
             self::$_properties[$this->className][$prop->name] = $prop->isProtected();
             self::$_reflections[$this->className][$prop->name] = $property;
             // 3.4 必须字段集
-            if ($property->isRequired()) {
-                self::$_requireds[$this->className][] = $prop->name;
-            }
+            self::$_requireds[$this->className][$prop->name] = $property->isRequired();
         }
     }
 

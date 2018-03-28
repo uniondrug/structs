@@ -28,7 +28,7 @@ abstract class ListStruct extends Struct
         // 3. 数据赋值
         $this->with([static::STRUCT_LIST_COLUMN => $data]);
         // 4. end
-        if ($end === true){
+        if ($end === true) {
             $this->endWith();
         }
     }
