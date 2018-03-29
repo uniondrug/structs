@@ -12,7 +12,7 @@ namespace Uniondrug\Structs;
 abstract class PaginatorStruct extends Struct
 {
     /**
-     * @var PagingResult
+     * @var \Uniondrug\Structs\PagingResult
      */
     public $paging;
 
