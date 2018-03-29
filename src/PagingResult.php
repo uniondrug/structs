@@ -1,27 +1,28 @@
 <?php
 /**
- * 分页器结构体
+ * @author wsfuyibing <websearch@163.com>
+ * @date   2018-03-26
  */
-
 namespace Uniondrug\Structs;
 
 /**
- * Class PagerStruct
- *
+ * 分页结构体
  * @property int $first
  * @property int $before
  * @property int $current
  * @property int $next
  * @property int $last
+ * @property int $limit
  * @property int $totalPages
  * @property int $totalItems
+ * @package Uniondrug\Structs
  */
-final class PagingStruct extends Struct
+class PagingResult extends Struct
 {
     /**
      * @var int
      */
-    protected $first = 1;
+    protected $first;
 
     /**
      * @var int
@@ -42,6 +43,11 @@ final class PagingStruct extends Struct
      * @var int
      */
     protected $next;
+
+    /**
+     * @var int
+     */
+    protected $limit = 0;
 
     /**
      * @var int
