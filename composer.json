@@ -1,6 +1,6 @@
 {
   "name": "uniondrug/structs",
-  "description": "Struct component for uniondrug/framework",
+  "description": "Uniondrug Struct Component for uniondrug/framework",
   "keywords": [
     "phalcon",
     "cache"
