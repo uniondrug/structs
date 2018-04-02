@@ -308,6 +308,7 @@ abstract class Struct implements StructInterface
     /**
      * 绑定Struct数据
      * @param mixed $data
+     * @return $this
      */
     public function with($data)
     {
@@ -320,11 +321,13 @@ abstract class Struct implements StructInterface
                 $this->withObject($data);
                 break;
         }
+        return $this;
     }
 
     /**
      * 使用数组赋值
      * @param array $data
+     * @return $this
      */
     private function withArray(array $data)
     {
@@ -336,6 +339,7 @@ abstract class Struct implements StructInterface
             // setter
             $this->setValue($name, $data[$name]);
         }
+        return $this;
     }
 
     /**
