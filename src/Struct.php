@@ -349,15 +349,15 @@ abstract class Struct implements StructInterface
     private function withObject($data)
     {
         foreach (self::$_properties[$this->className] as $name => $readonly) {
-            // 1. from property
-            if (isset($data->{$name})) {
-                $this->setValue($name, $data->{$name});
-                continue;
-            }
             // 2. from execute property
             $method = 'get'.ucfirst($name);
             if (method_exists($data, $method)) {
                 $this->setValue($name, $data->{$method}());
+                continue;
+            }
+            // 1. from property
+            if (isset($data->{$name})) {
+                $this->setValue($name, $data->{$name});
                 continue;
             }
             // 3. not support
