@@ -13,19 +13,22 @@ use Uniondrug\Validation\Param;
 class Property
 {
     /**
+     * 解析注释中的别名
+     * @var string
+     */
+    private static $commentRegexpAlias = "/@alias\s+([_a-z][_a-z0-9]*)/i";
+    /**
      * 解析注释中的分组
      * eg. name={values}
      * @var string
      */
     private static $commentRegexpGroup = "/([_a-z0-9]+)\s*=\s*\{([^\}]*)\}/i";
-
     /**
      * 解析注释分组中的元素
      * eg. name:value
      * @var string
      */
     private static $commentRegexpGroupItem = "/([_a-z0-9]+)\s*:\s*([:_a-z0-9\-\s\\\\]+)/i";
-
     /**
      * 单级解析
      * eg. name=value
@@ -33,47 +36,40 @@ class Property
      * @var string
      */
     private static $commentRegexpSingle = "/([_a-z0-9]+)\s*[=]*\s*([:_a-z0-9\-\s\\\\]*)/i";
-
     /**
      * 类型定义匹配
      * @var string
      */
     private static $commentRegexpType = "/@var\s+([_a-z0-9\\\\]+)\s*([\[\]]*)/i";
-
     /**
      * 验证器定义匹配
      * @var string
      */
     private static $commentRegexpValidator = "/@validator\(([^\)]*)\)/i";
-
     /**
      * 自定义的默认值
      * @var mixed
      */
     private $defaultValue;
-
     /**
      * 是否为数组
      * @var bool
      */
     private $arrayType = false;
-
     /**
      * 是否为结构体
      * @var bool
      */
     private $structType = false;
-
     /**
      * @var string
      */
-    private $name;
-
+    public $name;
+    public $aliasName = null;
     /**
      * @var string
      */
     private $className;
-
     /**
      * 验证器规则
      * @var array
@@ -85,7 +81,6 @@ class Property
         'required' => false,
         'empty' => true
     ];
-
     /**
      * 类型名称
      * <code>
@@ -95,7 +90,6 @@ class Property
      * @var string
      */
     private $type;
-
     /**
      * 是否为系统类型
      * @var bool
@@ -193,11 +187,15 @@ class Property
      */
     private function initComment(\ReflectionProperty $prop, string $namespace)
     {
-        // 1. get comment
+        // 0. get comment
         //    return for empty or undefined
         $comment = $prop->getDocComment();
         if (!$comment) {
             return;
+        }
+        // 1. match alias name
+        if (preg_match(self::$commentRegexpAlias, $comment, $m) > 0){
+            $this->aliasName = $m[1];
         }
         // 2. match type
         if (preg_match(self::$commentRegexpType, $comment, $m) > 0) {

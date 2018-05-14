@@ -16,14 +16,12 @@ abstract class Struct implements StructInterface
      * 并且要以[]结束, 表示多条记录列表
      */
     const STRUCT_LIST_COLUMN = "body";
-
     /**
      * 分页时记录分页参数字段名
      * 在分页结构中记录当前页码、总页数
      * 记录数等
      */
     const STRUCT_PAGING_COLUMN = "paging";
-
     /**
      * 属性记录
      * 按结构体类名识别各结构体有哪些属性
@@ -39,7 +37,6 @@ abstract class Struct implements StructInterface
      * @var array
      */
     private static $_properties = [];
-
     /**
      * 反射记录
      * 按结构体类名记录各结构体的属性对象
@@ -52,7 +49,6 @@ abstract class Struct implements StructInterface
      * @var array
      */
     private static $_reflections = [];
-
     /**
      * 必须字段记录
      * 按结构体类名记录各结构体的必填属性列表
@@ -69,7 +65,18 @@ abstract class Struct implements StructInterface
      * @var array
      */
     private static $_requireds = [];
-
+    /**
+     * 字段别别
+     * <code>
+     * $_aliases = [
+     *     'NS\\ClassName' => [
+     *         'drugId' => "drug_id"
+     *      ]
+     * ]
+     * </code>
+     * @var array
+     */
+    private static $_aliases = [];
     /**
      * 属性与值关系
      * 即各属性赋值后的结果
@@ -82,7 +89,6 @@ abstract class Struct implements StructInterface
      * @var array
      */
     private $attributes = [];
-
     /**
      * 已执行过setValue的属性列表
      * <code>
@@ -93,7 +99,6 @@ abstract class Struct implements StructInterface
      * @var array
      */
     private $requirements = [];
-
     /**
      * 结构体完整类名
      * <code>
@@ -332,12 +337,17 @@ abstract class Struct implements StructInterface
     private function withArray(array $data)
     {
         foreach (self::$_properties[$this->className] as $name => $readonly) {
-            // unset
-            if (!isset($data[$name])) {
+            // 1. standard name
+            if (isset($data[$name])) {
+                $this->setValue($name, $data[$name]);
                 continue;
             }
-            // setter
-            $this->setValue($name, $data[$name]);
+            // 2. alias name
+            if (isset(self::$_aliases[$this->className][$name])) {
+                $aliasName = self::$_aliases[$this->className][$name];
+                isset($data[$aliasName]) && $this->setValue($name, $data[$aliasName]);
+                continue;
+            }
         }
         return $this;
     }
@@ -349,18 +359,23 @@ abstract class Struct implements StructInterface
     private function withObject($data)
     {
         foreach (self::$_properties[$this->className] as $name => $readonly) {
-            // 2. from execute property
+            // 1. from execute property
             $method = 'get'.ucfirst($name);
             if (method_exists($data, $method)) {
                 $this->setValue($name, $data->{$method}());
                 continue;
             }
-            // 1. from property
+            // 2. from property
             if (isset($data->{$name})) {
                 $this->setValue($name, $data->{$name});
                 continue;
             }
-            // 3. not support
+            // 3. alias name
+            if (isset(self::$_aliases[$this->className][$name])) {
+                $aliasName = self::$_aliases[$this->className][$name];
+                isset($data->{$aliasName}) && $this->setValue($name, $data->{$aliasName});
+                continue;
+            }
         }
     }
 
@@ -457,6 +472,10 @@ abstract class Struct implements StructInterface
             self::$_reflections[$this->className][$prop->name] = $property;
             // 3.4 必须字段集
             self::$_requireds[$this->className][$prop->name] = $property->isRequired();
+            // 3.5 别名
+            if ($property->aliasName !== null && $property->aliasName !== '') {
+                self::$_aliases[$this->className][$prop->name] = $property->aliasName;
+            }
         }
     }
 
