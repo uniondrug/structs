@@ -21,7 +21,7 @@ abstract class PagingRequest extends Struct
     /**
      * 每页数量
      * @var int
-     * @Validator(options={min:1,max:50})
+     * @Validator(options={min:1,max:1000})
      */
     public $limit = 10;
 }
