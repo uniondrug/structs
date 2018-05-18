@@ -20,41 +20,42 @@ namespace Uniondrug\Structs;
 class PagingResult extends Struct
 {
     /**
+     * 第一页页码
      * @var int
      */
     protected $first;
-
     /**
+     * 上一页页码
      * @var int
      */
     protected $before;
-
     /**
+     * 下一页页码
      * @var int
      */
     protected $current;
-
     /**
+     * 最后一页页码
      * @var int
      */
     protected $last;
-
     /**
+     * 下一页页码
      * @var int
      */
     protected $next;
-
     /**
+     * 每页数量
      * @var int
      */
     protected $limit = 0;
-
     /**
+     * 总页数
      * @var int
      */
     protected $totalPages;
-
     /**
+     * 总记录数
      * @var int
      */
     protected $totalItems;
