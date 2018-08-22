@@ -166,6 +166,16 @@ abstract class Struct implements StructInterface
     }
 
     /**
+     * 检查属性是否已定义
+     * @param string $name
+     * @return bool
+     */
+    public function __isset($name)
+    {
+        return $this->hasProperty($name);
+    }
+
+    /**
      * 实现类名
      * @return string
      */
