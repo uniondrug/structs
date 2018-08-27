@@ -56,6 +56,7 @@ class Property
      * @var bool
      */
     private $arrayType = false;
+    private $booleanType = false;
     /**
      * 是否为结构体
      * @var bool
@@ -130,12 +131,41 @@ class Property
     }
 
     /**
+     * 将指定值转为Boolean类型
+     * @param mixed $value
+     * @return bool
+     */
+    public function generateBoolean($value)
+    {
+        $t = strtolower(gettype($value));
+        // 1. 已经是Boolean类型
+        if ($t === 'bool' || $t === 'boolean') {
+            return $value;
+        }
+        // 2. 是String类型
+        if ($t === 'string' && preg_match("/^t|true|1|yes|y$/i", $value)) {
+            return true;
+        }
+        // 3. 整型
+        if ($t === 'integer') {
+            return $t != 0;
+        }
+        // 4. false;
+        return false;
+    }
+    
+    /**
      * 属性是否为数组
      * @return bool
      */
     public function isArray()
     {
         return $this->arrayType;
+    }
+    
+    public function isBoolean()
+    {
+        return $this->booleanType;
     }
 
     /**

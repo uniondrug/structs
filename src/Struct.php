@@ -426,7 +426,10 @@ abstract class Struct implements StructInterface
         // 2. 线性字段赋值
         if ($property->isStruct()) {
             $this->attributes[$name] = call_user_func_array("{$propertyType}::factory", [$value]);
-        } else {
+        } else {            
+            if ($property->isBoolean()) {
+                $value = $property->generateBoolean($value);
+            }
             $property->validate($value);
             $this->attributes[$name] = $value;
         }
