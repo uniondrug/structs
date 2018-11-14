@@ -153,7 +153,7 @@ class Property
         // 4. false;
         return false;
     }
-    
+
     /**
      * 属性是否为数组
      * @return bool
@@ -162,7 +162,7 @@ class Property
     {
         return $this->arrayType;
     }
-    
+
     public function isBoolean()
     {
         return $this->booleanType;
@@ -199,15 +199,29 @@ class Property
      * 数据验证
      * @param mixed $value
      */
-    public function validate($value)
+    public function validate(&$value)
     {
         // 1. 非系统类型时忽略
         //    还不是最小化的字段
         if (!$this->systemType || count($this->rule['type']) === 0) {
             return;
         }
+        $value = $this->filterString($value);
         // 2. validator
         Param::check([$this->name => $value], [$this->name => $this->rule]);
+    }
+
+    /**
+     * 字符串过滤
+     * @param string $value
+     * @return string
+     */
+    private function filterString($value)
+    {
+        if (is_string($value)) {
+            return trim($value);
+        }
+        return $value;
     }
 
     /**
@@ -224,7 +238,7 @@ class Property
             return;
         }
         // 1. match alias name
-        if (preg_match(self::$commentRegexpAlias, $comment, $m) > 0){
+        if (preg_match(self::$commentRegexpAlias, $comment, $m) > 0) {
             $this->aliasName = $m[1];
         }
         // 2. match type

@@ -31,4 +31,11 @@ interface StructInterface
      * @return string
      */
     public function toJson($options = 0, $depth = 512);
+
+    /**
+     * 入参是否传值
+     * @param string $name
+     * @return bool
+     */
+    public function isInput($name);
 }
