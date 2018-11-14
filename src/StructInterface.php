@@ -33,8 +33,9 @@ interface StructInterface
     public function toJson($options = 0, $depth = 512);
 
     /**
-     * 获取已执行过setValue的属性列表
-     * @return array
+     * 入参是否传值
+     * @param string $name
+     * @return bool
      */
-    public function getRequirements();
+    public function isInput($name);
 }

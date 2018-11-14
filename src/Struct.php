@@ -402,7 +402,6 @@ abstract class Struct implements StructInterface
          */
         $property = $this->getProperty($name);
         $propertyType = $property->getType();
-        $value = $this->filterString($value);
         // 1. 数组字段赋值
         if ($property->isArray()) {
             // 1.2 不可迭代的数据类型
@@ -511,24 +510,12 @@ abstract class Struct implements StructInterface
     }
 
     /**
-     * 字符串过滤
-     * @param $value
-     * @return string
+     * 入参是否传值
+     * @param string $name
+     * @return bool
      */
-    private function filterString($value)
+    public function isInput($name)
     {
-        if (is_string($value)) {
-            return trim($value);
-        }
-        return $value;
-    }
-
-    /**
-     * 获取已执行过setValue的属性列表
-     * @return array
-     */
-    public function getRequirements()
-    {
-        return $this->requirements;
+        return $this->requirements[$name] ? true : false;
     }
 }
