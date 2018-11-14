@@ -213,7 +213,7 @@ class Property
 
     /**
      * 字符串过滤
-     * @param $value
+     * @param string $value
      * @return string
      */
     private function filterString($value)

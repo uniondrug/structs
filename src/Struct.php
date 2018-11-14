@@ -516,6 +516,6 @@ abstract class Struct implements StructInterface
      */
     public function isInput($name)
     {
-        return $this->requirements[$name] ? true : false;
+        return isset($this->requirements[$name]);
     }
 }
