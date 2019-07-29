@@ -28,14 +28,14 @@ class Property
      * eg. name:value
      * @var string
      */
-    private static $commentRegexpGroupItem = "/([_a-z0-9]+)\s*:\s*([:_a-z0-9\-\s\\\\]+)/i";
+    private static $commentRegexpGroupItem = "/([_a-z0-9]+)\s*:\s*([:_a-z0-9\.\-\s\\\\]+)/i";
     /**
      * 单级解析
      * eg. name=value
      *     name
      * @var string
      */
-    private static $commentRegexpSingle = "/([_a-z0-9]+)\s*[=]*\s*([:_a-z0-9\-\s\\\\]*)/i";
+    private static $commentRegexpSingle = "/([_a-z0-9]+)\s*[=]*\s*([:_a-z0-9\.\-\s\\\\]*)/i";
     /**
      * 类型定义匹配
      * @var string
@@ -57,6 +57,7 @@ class Property
      */
     private $arrayType = false;
     private $booleanType = false;
+    private $moneyType = false;
     /**
      * 是否为结构体
      * @var bool
@@ -112,12 +113,20 @@ class Property
         $this->initDefaultValidator();
     }
 
+    public function formatMoney($value)
+    {
+        return sprintf("%.02f", $value);
+    }
+
     /**
      * 读取默认值
      * @return mixed
      */
     public function getDefaultValue()
     {
+        if ($this->moneyType) {
+            return $this->formatMoney($this->defaultValue);
+        }
         return $this->defaultValue;
     }
 
@@ -166,6 +175,11 @@ class Property
     public function isBoolean()
     {
         return $this->booleanType;
+    }
+
+    public function isMoney()
+    {
+        return $this->moneyType;
     }
 
     /**
@@ -359,6 +373,9 @@ class Property
         if (preg_match_all(static::$commentRegexpSingle, $comment, $m) > 0) {
             foreach ($m[1] as $i => $name) {
                 if ($name == 'type') {
+                    if (strtolower($m[2][$i]) == 'money') {
+                        $this->moneyType = true;
+                    }
                     $this->rule[$name] = [$m[2][$i]];
                 } else if ($name == 'required' || $name == 'empty') {
                     $value = strtolower($m[2][$i]) === 'false' ? false : true;
@@ -423,6 +440,7 @@ class Property
             case 'int' :
                 $type = 'integer';
                 break;
+            case 'money' :
             case 'str' :
                 $type = 'string';
                 break;
