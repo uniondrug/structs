@@ -176,6 +176,14 @@ abstract class Struct implements StructInterface
     }
 
     /**
+     * 结构体完成之后触发
+     * @note 当前endWith()被调用时触发
+     */
+    public function afterFactory()
+    {
+    }
+
+    /**
      * 实现类名
      * @return string
      */
@@ -292,6 +300,7 @@ abstract class Struct implements StructInterface
                 throw new Exception("必须的属性'{$this->className}::\${$name}'在入参中未定义");
             }
         }
+        $this->afterFactory();
     }
 
     /**
@@ -431,6 +440,11 @@ abstract class Struct implements StructInterface
                 $value = $property->generateBoolean($value);
             }
             $property->validate($value);
+
+            if ($property->isMoney()){
+                $value = $property->formatMoney($value);
+            }
+
             $this->attributes[$name] = $value;
         }
         $this->requirements[$name] = true;
