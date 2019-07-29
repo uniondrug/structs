@@ -28,14 +28,14 @@ class Property
      * eg. name:value
      * @var string
      */
-    private static $commentRegexpGroupItem = "/([_a-z0-9]+)\s*:\s*([:_a-z0-9\-\s\\\\]+)/i";
+    private static $commentRegexpGroupItem = "/([_a-z0-9]+)\s*:\s*([:_a-z0-9\.\-\s\\\\]+)/i";
     /**
      * 单级解析
      * eg. name=value
      *     name
      * @var string
      */
-    private static $commentRegexpSingle = "/([_a-z0-9]+)\s*[=]*\s*([:_a-z0-9\-\s\\\\]*)/i";
+    private static $commentRegexpSingle = "/([_a-z0-9]+)\s*[=]*\s*([:_a-z0-9\.\-\s\\\\]*)/i";
     /**
      * 类型定义匹配
      * @var string
