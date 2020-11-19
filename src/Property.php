@@ -177,6 +177,19 @@ class Property
         return $this->booleanType;
     }
 
+    /**
+     * 是否允许为空
+     * @return bool
+     */
+    public function isEmpty()
+    {
+        return $this->rule['empty'];
+    }
+
+    /**
+     * 是否为Money类型
+     * @return bool
+     */
     public function isMoney()
     {
         return $this->moneyType;
@@ -184,7 +197,7 @@ class Property
 
     /**
      * 属性值是否必填
-     * @return mixed
+     * @return bool
      */
     public function isRequired()
     {

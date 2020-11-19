@@ -414,19 +414,27 @@ abstract class Struct implements StructInterface
         // 1. 数组字段赋值
         if ($property->isArray()) {
             // 1.2 不可迭代的数据类型
-            if (!$this->isIteratorAble($value)) {
+            if ($value === null || $value === "") {
+                $value = [];
+            } else if (!$this->isIteratorAble($value)) {
                 throw new Exception("属性'{$this->className}::{$name}'的值必须是可迭代的数据格式");
             }
             // 1.3 结构体递归
+            $count = 0;
             if ($property->isStruct()) {
                 foreach ($value as $val) {
+                    $count++;
                     $this->attributes[$name][] = call_user_func_array("{$propertyType}::factory", [$val]);
                 }
             } else {
                 foreach ($value as $val) {
+                    $count++;
                     $property->validate($val);
                     $this->attributes[$name][] = $val;
                 }
+            }
+            if (!$property->isEmpty() && $count === 0) {
+                throw new Exception("属性'{$this->className}::{$name}'的值至少需要1条记录");
             }
             // 1.4 completed
             $this->requirements[$name] = true;
@@ -440,11 +448,9 @@ abstract class Struct implements StructInterface
                 $value = $property->generateBoolean($value);
             }
             $property->validate($value);
-
-            if ($property->isMoney()){
+            if ($property->isMoney()) {
                 $value = $property->formatMoney($value);
             }
-
             $this->attributes[$name] = $value;
         }
         $this->requirements[$name] = true;
