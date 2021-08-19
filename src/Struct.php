@@ -135,6 +135,18 @@ abstract class Struct implements StructInterface
             $this->endWith();
         }
     }
+    
+    /**
+     * wakeup
+     */
+    public function __wakeup()
+    {
+        $this->initRefelection();
+        foreach (self::$_properties[$this->className] as $name => $readonly) {
+            // 1. 清除属性定义, 让__get/__set生效
+            unset($this->{$name});
+        }
+    }
 
     /**
      * @param string $name
