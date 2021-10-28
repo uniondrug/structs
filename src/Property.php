@@ -280,6 +280,10 @@ class Property
                     throw new Exception("属性'{$this->className}::\${$this->name}'禁止使用'@var array'注解");
                 }
                 $this->type = $this->toSystemType($m[1]);
+                // set boolean type
+                if ($this->type === 'boolean'){
+                    $this->booleanType = true;
+                }
             } else {
                 $this->type = $m[1][0] == '\\' ? $m[1] : '\\'.$namespace.'\\'.$m[1];
             }
